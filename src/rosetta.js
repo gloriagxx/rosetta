@@ -1,4 +1,4 @@
-(function () {
+(function() {
     var Rosetta = {};
 
     (function() {
@@ -87,27 +87,26 @@
             }
 
             return (element.getElementById && isSimple && maybeID) ?
-            ((found = element.getElementById(nameOnly)) ? [found] : []) :
-            (element.nodeType !== 1 && element.nodeType !== 9 && element.nodeType !== 11) ? [] :
-            slice.call(
-                isSimple && !maybeID && element.getElementsByClassName ?
-                maybeClass ? element.getElementsByClassName(nameOnly) :
-                element.getElementsByTagName(selector) :
-                element.querySelectorAll(selector)
-            );
+                ((found = element.getElementById(nameOnly)) ? [found] : []) :
+                (element.nodeType !== 1 && element.nodeType !== 9 && element.nodeType !== 11) ? [] :
+                slice.call(
+                    isSimple && !maybeID && element.getElementsByClassName ?
+                    maybeClass ? element.getElementsByClassName(nameOnly) :
+                    element.getElementsByTagName(selector) :
+                    element.querySelectorAll(selector)
+                );
         }
 
         function deserializeValue(value) {
             try {
                 return value ?
                     value == "true" ||
-                    ( value == "false" ? false :
+                    (value == "false" ? false :
                         value == "null" ? null :
                         +value + "" == value ? +value :
                         /^[\[\{]/.test(value) ? JSON.parse(value) :
-                        value )
-                    : value
-            } catch(e) {
+                        value) : value
+            } catch (e) {
                 return value
             }
         }
@@ -399,16 +398,43 @@
                 })(type, renderFunc);
             }
 
-            function parse(parent) {
-                var js = (/\[CDATA\[([\s\S]*?)\]\]/ig).exec(parent.innerHTML)[1];
-                (new Function('', js))();
-            }
+            // function parse(parent) {
+            //     var js = (/\[CDATA\[([\s\S]*?)\]\]/ig).exec(parent.innerHTML)[1];
+            //     (new Function('', js))();
+            // }
+
+            // function init() {
+            //     var elems = query('textarea[type="r-element"]');
+            //     for (var i = 0; i < elems.length; i++) {
+            //         var item = elems[i];
+            //         parse(item);
+            //     }
+            // }
+
 
             function init() {
-                var elems = query('textarea[type="r-element"]');
+                var elems = query('[ref]');
                 for (var i = 0; i < elems.length; i++) {
-                    var item = elems[i];
-                    parse(item);
+                    var item = elems[i],
+                        type = item.tagName.toLowerCase(),
+                        attrs = item.attributes,
+                        options = {};
+
+                    if (type.indexOf('r-') == 0) {
+                        var children = item.children,
+                            childrenArr = [];
+
+                        for (var j = 0; j < children.length; j++) {
+                            childrenArr[j] = children[j];
+                        }
+
+                        for (var n = 0; n < attrs.length; n++) {
+                            var attr = attrs[n];
+                            options[attr.name] = attr.nodeValue;
+                        }
+
+                        Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
+                    }
                 }
             }
 
@@ -468,7 +494,7 @@
                 refers[name] = elemObj;
             }
 
-            function render(obj, root) {
+            function render(obj, root, force) {
                 if (isString(root)) {
                     root = query(root)[0];
                 }
@@ -496,7 +522,7 @@
                     }
                 }
 
-                if (isDomNode(root) && root.getAttribute('type') == 'r-element') {
+                if ((isDomNode(root) && root.getAttribute('type') == 'r-element') || force == true) {
                     root.parentElement.replaceChild(obj.root, root);
                     obj.trigger(ATTACHED);
                 } else {
@@ -520,7 +546,7 @@
                     children = toPlainArray(children),
                     result = null;
 
-                attr =  deserializeValue(attr) || {};
+                attr = deserializeValue(attr) || {};
 
                 for (var i in attr) {
                     attr[i] = deserializeValue(attr[i]);
@@ -598,3 +624,15 @@
 
     window.Rosetta = Rosetta;
 })();
+
+var readyRE = /complete|loaded|interactive/,
+    ready = function(callback) {
+        if (readyRE.test(document.readyState) && document.body) {
+            callback();
+        } else document.addEventListener('DOMContentLoaded', function() {
+            callback();
+        }, false)
+        return this
+    }
+
+ready(Rosetta.init);
