@@ -433,11 +433,35 @@
                             options[attr.name] = attr.nodeValue;
                         }
 
-                        Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
+                        var root = Rosetta.render(Rosetta.create(type, options, childrenArr), item, true),
+                            newClass = (root.getAttribute('class') || '')? (root.getAttribute('class') || '') + ' ' + type : type;
+
+                        root.setAttribute('class', newClass);
+                        show.call(root);
                     }
                 }
             }
 
+            function defaultDisplay(nodeName) {
+                var element, display;
+                var elementDisplay = {};
+                if (!elementDisplay[nodeName]) {
+                    element = document.createElement(nodeName);
+                    document.body.appendChild(element);
+                    display = getComputedStyle(element, '').getPropertyValue("display");
+                    element.parentNode.removeChild(element);
+                    display == "none" && (display = "block");
+                    elementDisplay[nodeName] = display;
+                }
+                return elementDisplay[nodeName];
+            }
+
+            function show () {
+                this.style.display == "none" && (this.style.display = '');
+                if (getComputedStyle(this, '').getPropertyValue("display") == "none") {
+                    this.style.display = defaultDisplay(this.nodeName)
+                }
+            }
 
             function replaceContent(obj) {
                 obj.holder = {};
@@ -525,6 +549,7 @@
                 if ((isDomNode(root) && root.getAttribute('type') == 'r-element') || force == true) {
                     root.parentElement.replaceChild(obj.root, root);
                     obj.trigger(ATTACHED);
+                    return obj.root;
                 } else {
                     if (root.isRosettaElem == true) {
                         root.children = root.children || [];
