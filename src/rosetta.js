@@ -30,22 +30,36 @@
             return typeof value == 'object';
         }
 
-        function extend(target, source, deep) {
-            for (key in source) {
-                if (deep && (isPlainObject(source[key]) || isArray(source[key]))) {
-                    if (isPlainObject(source[key]) && !isPlainObject(target[key])) {
-                        target[key] = {};
-                    }
+        function extend(target) {
+            var end = [].slice.call(arguments, arguments.length - 2),
+                deep = false,
+                params = null;
 
-                    if (isArray(source[key]) && !isArray(target[key])) {
-                        target[key] = [];
-                    }
-
-                    extend(target[key], source[key], deep);
-                } else if (source[key] !== undefined) {
-                    target[key] = source[key];
-                }
+            if (end === true) {
+                deep = true;
+                params = [].slice.call(arguments, 1, arguments.length - 2);
+            } else {
+                params = [].slice.call(arguments, 1);
             }
+
+            params.map(function(source, index) {
+                for (key in source) {
+                    if (deep && (isPlainObject(source[key]) || isArray(source[key]))) {
+                        if (isPlainObject(source[key]) && !isPlainObject(target[key])) {
+                            target[key] = {};
+                        }
+
+                        if (isArray(source[key]) && !isArray(target[key])) {
+                            target[key] = [];
+                        }
+
+                        extend(target[key], source[key], deep);
+                    } else if (source[key] !== undefined) {
+                        target[key] = source[key];
+                    }
+                }
+            });
+
             return target;
         }
 
@@ -97,19 +111,6 @@
                 );
         }
 
-        function deserializeValue(value) {
-            try {
-                return value ?
-                    value == "true" ||
-                    (value == "false" ? false :
-                        value == "null" ? null :
-                        +value + "" == value ? +value :
-                        /^[\[\{]/.test(value) ? JSON.parse(value) :
-                        value) : value
-            } catch (e) {
-                return value
-            }
-        }
 
         var plainDom = {
                 content: 'content',
@@ -307,19 +308,31 @@
             function createElemClassFactory(type, renderFunc) {
                 return (function(type, renderFunc) {
                     function CustomElement(options) {
-                        extend(this, options || {}, true);
+                        extend(this, {
+                            type: type,
+
+                            name: name,
+
+                            renderFunc: renderFunc,
+
+                            refs: {},
+
+                            events: {},
+
+                            isAttached: false
+                        }, options || {}, true);
                     }
 
                     function update(options) {
                         extend(this.attrs, options, true);
-                        this.trigger(ATTRIBUTECHANGE);
+                        this.trigger(ATTRIBUTECHANGE, this);
                     }
 
                     function destroy() {
                         this.off();
                         this.root.remove();
                         delete ref(this.name);
-                        this.trigger(DETACHED);
+                        this.trigger(DETACHED, this);
                     }
 
                     function on(type, listener, context, ifOnce) {
@@ -367,22 +380,26 @@
                     }
 
 
+                    function create(type, attr) {
+                        var obj = Rosetta.create.apply(Rosetta, arguments);
+                        if (!!attr && !!attr.ref) {
+                            if (obj.isRosettaElem == true) {
+                                this.refs[attr.ref] = obj.root;
+                            } else if (isDomNode(obj)) {
+                                this.refs[attr.ref] = obj;
+                            }
+                        }
+
+                        return obj;
+                    }
+
+
                     CustomElement.prototype = {
-                        type: type,
-
-                        name: name,
-
                         update: update,
 
                         destroy: destroy,
 
-                        renderFunc: renderFunc,
-
                         isRosettaElem: true,
-
-                        ref: {},
-
-                        events: {},
 
                         on: on,
 
@@ -390,30 +407,20 @@
 
                         off: off,
 
-                        once: once
-                    }
+                        once: once,
+
+                        create: create
+
+                    };
 
                     return CustomElement;
 
                 })(type, renderFunc);
             }
 
-            // function parse(parent) {
-            //     var js = (/\[CDATA\[([\s\S]*?)\]\]/ig).exec(parent.innerHTML)[1];
-            //     (new Function('', js))();
-            // }
-
-            // function init() {
-            //     var elems = query('textarea[type="r-element"]');
-            //     for (var i = 0; i < elems.length; i++) {
-            //         var item = elems[i];
-            //         parse(item);
-            //     }
-            // }
-
 
             function init() {
-                var elems = query('[ref]');
+                var elems = query('.r-element');
                 for (var i = 0; i < elems.length; i++) {
                     var item = elems[i],
                         type = item.tagName.toLowerCase(),
@@ -422,11 +429,7 @@
 
                     if (type.indexOf('r-') == 0) {
                         var children = item.children,
-                            childrenArr = [];
-
-                        for (var j = 0; j < children.length; j++) {
-                            childrenArr[j] = children[j];
-                        }
+                            childrenArr = [].slice.call(children);
 
                         for (var n = 0; n < attrs.length; n++) {
                             var attr = attrs[n];
@@ -528,8 +531,6 @@
                 }
 
                 if (obj.isRosettaElem == true) {
-                    obj.renderFunc(obj);
-
                     obj.root = obj.__t(obj, obj.attrs, obj.ref);
 
                     replaceContent(obj);
@@ -540,7 +541,7 @@
                 for (var i in obj.attrs) {
                     var item = obj.attrs[i];
                     if (!supportEvent[i]) {
-                        obj.root.setAttribute(i, item);
+                        obj.root.setAttribute(i, item || '');
                     } else {
                         obj.root.addEventListener(supportEvent[i], item, false);
                     }
@@ -548,7 +549,8 @@
 
                 if ((isDomNode(root) && root.getAttribute('type') == 'r-element') || force == true) {
                     root.parentElement.replaceChild(obj.root, root);
-                    obj.trigger(ATTACHED);
+                    obj.trigger(ATTACHED, obj);
+                    obj.isAttached = true;
                     return obj.root;
                 } else {
                     if (root.isRosettaElem == true) {
@@ -566,16 +568,36 @@
                 }
             }
 
+            function toType(attr) {
+                var value = null;
+
+                try {
+                    value = eval(attr);
+
+                    if (isArray(value)) {
+                        value.map(function(item, index) {
+                            value[index] = toType(item);
+                        });
+                    } else {
+                        for (var i in value) {
+                            var v = value[i];
+                            value[i] = toType(v);
+                        }
+                    }
+                } catch (e) {
+                    value = attr;
+                }
+
+                return value;
+            }
+
+            // create的trigger之前执行renderfunc
             function create(type, attr) {
                 var children = [].slice.call(arguments, 2),
                     children = toPlainArray(children),
                     result = null;
 
-                attr = deserializeValue(attr) || {};
-
-                for (var i in attr) {
-                    attr[i] = deserializeValue(attr[i]);
-                }
+                attr = toType(attr || '');
 
                 if (isString(type)) {
                     if (isOriginalTag(type)) {
@@ -586,19 +608,10 @@
 
                     } else {
                         var NewClass = getElemClass(type),
-                            options = {
-                                attrs: attr || {}
-                            },
                             elemObj = null;
 
                         if (!!NewClass) {
-                            elemObj = new NewClass(options);
-                            elemObj.name = attr.ref ? attr.ref : '';
-                            if (!!attr.ref) {
-                                addElem(attr.ref, elemObj);
-                            }
-
-                            elemObj.trigger(CREATED);
+                            elemObj = new NewClass();
                         }
 
                         result = elemObj;
@@ -611,6 +624,18 @@
 
                             render(item, result);
                         }
+                    }
+
+                    if (isString(type) && !isOriginalTag(type)) {
+                        elemObj.renderFunc(elemObj);
+                        elemObj.name = attr.ref ? attr.ref : '';
+                        if (!!attr.ref) {
+                            addElem(attr.ref, elemObj);
+                        }
+
+                        extend(elemObj.attrs, attr, true);
+
+                        elemObj.trigger(CREATED, elemObj);
                     }
 
                     return result;
