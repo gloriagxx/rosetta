@@ -1,0 +1,31 @@
+{
+    "name": "rosetta",
+    "version": "1.0.0",
+    "description": "A Webcomponent-like javascript framework",
+    "keywords": [
+
+    ],
+    "author": "jiexuangao",
+    "homepage": "",
+    "contributors": [
+        {
+            "name": ""
+        }
+    ],
+    "bugs": {
+        "url": "",
+        "email": ""
+    },
+    "main": "",
+    "bin": "",
+    "repository": "git@github.com:jiexuangao/rosetta.git",
+    "script": {
+        "dist": "browserify index.js > ./dist/Rosetta.js"
+    },
+    "dependencies": {
+
+    },
+    "devDependencies": {
+        "browserify": "^9.0.7"
+    }
+}
