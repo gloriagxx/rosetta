@@ -598,6 +598,8 @@ var plainDom = require('./plainDom.js'),
             deep = false,
             params = null;
 
+        target = target || {};
+
         if (end === true) {
             deep = true;
             params = [].slice.call(arguments, 1, arguments.length - 2);
