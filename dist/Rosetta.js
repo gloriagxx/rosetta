@@ -252,7 +252,9 @@ function createElemClass(type, renderFunc) {
 
                 events: {},
 
-                isAttached: false
+                isAttached: false,
+
+                attrs: {}
             }, options || {}, true);
         }
 
@@ -436,7 +438,7 @@ function create(type, attr) {
         children = toPlainArray(children),
         result = null;
 
-    attr = toType(attr || '');
+    attr = toType(attr || '') || {};
 
     if (isString(type)) {
         if (isOriginalTag(type)) {
