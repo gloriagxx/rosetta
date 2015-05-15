@@ -148,13 +148,50 @@ var supportEvent = require('./supportEvent.js'),
     isOriginalTag = utils.isOriginalTag,
     isDomNode = utils.isDomNode,
     isString = utils.isString,
+    isFunction = utils.isFunction,
 
     ATTACHED = 'attached',
     DETACHED = 'detached',
     CREATED = 'created',
     ATTRIBUTECHANGE = 'attributeChange',
     refers = {},
-    _elemClass = {};
+    _elemClass = {},
+    allRendered = false;
+
+
+function bind(type, listener, context, ifOnce) {
+    this.events = this.events || {};
+    var queue = this.events[type] || (this.events[type] = []);
+    queue.push({
+        f: listener,
+        o: context,
+        ifOnce: ifOnce
+    });
+}
+
+function fire(type) {
+    this.events = this.events || {};
+    var slice = [].slice,
+        list = this.events[type];
+
+    if (!list) {
+        return;
+    }
+
+    var arg = slice.call(arguments, 1);
+    for (var i = 0, j = list.length; i < j; i++) {
+        var cb = list[i];
+        if (cb.f.apply(cb.o, arg) === false) {
+            break;
+        }
+
+        if (cb.ifOnce === true) {
+            list.splice(i, 1);
+            i--;
+            j--;
+        }
+    }
+}
 
 
 function createElemClass(type, renderFunc) {
@@ -184,35 +221,11 @@ function createElemClass(type, renderFunc) {
     }
 
     function on(type, listener, context, ifOnce) {
-        var queue = this.events[type] || (this.events[type] = []);
-        queue.push({
-            f: listener,
-            o: context,
-            ifOnce: ifOnce
-        });
+        bind.call(this, type, listener, context, ifOnce);
     }
 
     function trigger(type) {
-        var slice = [].slice,
-            list = this.events[type];
-
-        if (!list) {
-            return;
-        }
-
-        var arg = slice.call(arguments, 1);
-        for (var i = 0, j = list.length; i < j; i++) {
-            var cb = list[i];
-            if (cb.f.apply(cb.o, arg) === false) {
-                break;
-            }
-
-            if (cb.ifOnce === true) {
-                list.splice(i, 1);
-                i--;
-                j--;
-            }
-        }
+        fire.call(this, type);
     }
 
     function off(type) {
@@ -285,6 +298,7 @@ function createElemClass(type, renderFunc) {
 
 
 function init() {
+    allRendered = false;
     var elems = query('.r-element');
     for (var i = 0; i < elems.length; i++) {
         var item = elems[i],
@@ -308,6 +322,8 @@ function init() {
             show.call(root);
         }
     }
+    allRendered = true;
+    fire.call(Rosetta, 'ready');
 }
 
 function defaultDisplay(nodeName) {
@@ -354,7 +370,8 @@ function replaceContent(obj) {
             var newDom = query(i, tmp);
             if (newDom.length > 0) {
                 var container = document.createElement('div');
-                container.setAttribute('class', '.content');
+                container.setAttribute('class', 'content');
+                container.setAttribute('selector', i);
                 dom.parentElement.replaceChild(container, dom);
                 for (var j = 0; j < newDom.length; j++) {
                     container.appendChild(newDom[j]);
@@ -496,6 +513,16 @@ function register(type, renderFunc) {
     return elemClass;
 }
 
+function ready(cb) {
+    if (isFunction(cb)) {
+        if (allRendered == true) {
+            cb();
+        } else {
+            bind.call(Rosetta, 'ready', cb);
+        }
+    }
+}
+
 var Rosetta = {
     init: init,
 
@@ -511,7 +538,9 @@ var Rosetta = {
 
     create: create,
 
-    register: register
+    register: register,
+
+    ready: ready
 };
 
 module.exports = Rosetta;
@@ -600,6 +629,10 @@ var plainDom = require('./plainDom.js'),
     isObject = module.exports.isObject = function(value) {
         return typeof value == 'object';
     },
+
+    isFunction = module.exports.isFunction = function(obj) {
+        return typeof obj == 'function' || false;
+    }
 
     extend = module.exports.extend = function(target) {
         var end = [].slice.call(arguments, arguments.length - 2),
@@ -722,7 +755,7 @@ var plainDom = require('./plainDom.js'),
             default:
                 return obj.toString();
         }
-    }
+    };
 
 },{"./plainDom.js":1}],5:[function(require,module,exports){
 var Rosetta = require('./lib/rosetta.js'),
