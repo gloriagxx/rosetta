@@ -142,6 +142,7 @@ var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
     query = utils.query,
     toType = utils.toType,
+    objToString = utils.objToString,
     extend = utils.extend,
     toPlainArray = utils.toPlainArray,
     isOriginalTag = utils.isOriginalTag,
@@ -405,7 +406,12 @@ function render(obj, root, force) {
     for (var i in obj.attrs) {
         var item = obj.attrs[i];
         if (!supportEvent[i]) {
-            obj.root.setAttribute(i, item || '');
+            if (!!item) {
+                if (!isString(item)) {
+                    item = objToString(item);
+                }
+                obj.root.setAttribute(i, item);
+            }
         } else {
             obj.root.addEventListener(supportEvent[i], item, false);
         }
@@ -567,35 +573,35 @@ module.exports = supportEvent;
 },{}],4:[function(require,module,exports){
 var plainDom = require('./plainDom.js'),
 
-    isString = module.exports.isString = function (elem) {
+    isString = module.exports.isString = function(elem) {
         return typeof elem == 'string';
     },
 
-    isDomNode = module.exports.isDomNode = function (elem) {
+    isDomNode = module.exports.isDomNode = function(elem) {
         return !!(elem && elem.nodeType === 1);
     },
 
-    isOriginalTag = module.exports.isOriginalTag =function (str) {
+    isOriginalTag = module.exports.isOriginalTag = function(str) {
         return !!plainDom[str];
     },
 
-    isWindow = module.exports.isWindow = function (obj) {
+    isWindow = module.exports.isWindow = function(obj) {
         return obj != null && obj == obj.window;
     },
 
-    isPlainObject = module.exports.isPlainObject = function (obj) {
+    isPlainObject = module.exports.isPlainObject = function(obj) {
         return isObject(obj) && !isWindow(obj) && Object.getPrototypeOf(obj) == Object.prototype;
     },
 
-    isArray = module.exports.isArray = function (value) {
+    isArray = module.exports.isArray = function(value) {
         return value instanceof Array;
     },
 
-    isObject = module.exports.isObject = function (value) {
+    isObject = module.exports.isObject = function(value) {
         return typeof value == 'object';
     },
 
-    extend = module.exports.extend = function (target) {
+    extend = module.exports.extend = function(target) {
         var end = [].slice.call(arguments, arguments.length - 2),
             deep = false,
             params = null;
@@ -630,14 +636,14 @@ var plainDom = require('./plainDom.js'),
         return target;
     },
 
-    camelize = module.exports.camelize = function (key) {
+    camelize = module.exports.camelize = function(key) {
         var _reg = /-(.)/g;
         return key.replace(_reg, function(_, txt) {
             return txt.toUpperCase();
         });
     },
 
-    toPlainArray = module.exports.toPlainArray = function (data, result) {
+    toPlainArray = module.exports.toPlainArray = function(data, result) {
         if (!result) {
             var result = [];
         }
@@ -654,7 +660,7 @@ var plainDom = require('./plainDom.js'),
         return result;
     },
 
-    query = module.exports.query = function (selector, element) {
+    query = module.exports.query = function(selector, element) {
         var found,
             maybeID = selector[0] == '#',
             maybeClass = !maybeID && selector[0] == '.',
@@ -678,7 +684,7 @@ var plainDom = require('./plainDom.js'),
             );
     },
 
-    toType = module.exports.toType = function (attr) {
+    toType = module.exports.toType = function(attr) {
         var value = null;
 
         try {
@@ -699,7 +705,24 @@ var plainDom = require('./plainDom.js'),
         }
 
         return value;
-    };
+    },
+
+    objToString = module.exports.objToString = function(obj, indeep) {
+        switch (typeof obj) {
+            case "string":
+                return "'" + obj + "'";
+            case "function":
+                return obj.name || obj.toString();
+            case "object":
+                var indent = Array(indeep || 1).join('\t'),
+                    isArray = Array.isArray(obj);
+                return ('{[' [+isArray] + Object.keys(obj).map(function(key) {
+                    return '\n\t' + indent + (isArray ? '' : key + ': ') + objToString(obj[key], (indeep || 1) + 1);
+                }).join(',') + '\n' + indent + '}]' [+isArray]).replace(/[\s\t\n]+(?=(?:[^\'"]*[\'"][^\'"]*[\'"])*[^\'"]*$)/g, '');
+            default:
+                return obj.toString();
+        }
+    }
 
 },{"./plainDom.js":1}],5:[function(require,module,exports){
 var Rosetta = require('./lib/rosetta.js'),
