@@ -760,14 +760,19 @@ var plainDom = require('./plainDom.js'),
 },{"./plainDom.js":1}],5:[function(require,module,exports){
 var Rosetta = require('./lib/rosetta.js'),
 
-    readyRE = /complete|loaded|interactive/,
+    readyRE = /complete/,
     ready = function(callback) {
         if (readyRE.test(document.readyState) && document.body) {
             callback();
-        } else document.addEventListener('DOMContentLoaded', function() {
-            callback();
-        }, false)
-        return this
+        } else {
+            if (!document.addEventListener) {
+                window.attachEvent('onload', callback);
+            } else {
+                document.addEventListener('DOMContentLoaded', function() {
+                    callback();
+                }, false);
+            }
+        }
     };
 
 window.Rosetta = Rosetta;

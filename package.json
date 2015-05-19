@@ -20,12 +20,30 @@
     "bin": "",
     "repository": "git@github.com:jiexuangao/rosetta.git",
     "script": {
-        "dist": "browserify index.js > ./dist/Rosetta.js"
+        "dist": "browserify index.js > ./dist/Rosetta.js",
+        "ie": "browserify index.js > ./dist/Rosetta-ie.js"
     },
     "dependencies": {
 
     },
     "devDependencies": {
-        "browserify": "^9.0.7"
+        "browserify": "^9.0.7",
+        "tape": "~2.4.0"
+    },
+    "testling": {
+        "files": "test/*.js",
+        "browsers": [
+            "ie/6..latest",
+            "chrome/41..latest",
+            "firefox/16..latest",
+            "safari/latest",
+            "opera/11.0..latest",
+            "iphone/6..latest",
+            "ipad/6..latest",
+            "android-browser/2.1..latest"
+        ]
+    },
+    "scripts": {
+        "test": "tape test/*.js"
     }
 }
