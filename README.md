@@ -711,14 +711,17 @@ Rosetta.settings.brackets
 ```
 
 
+## 三、兼容性
 
-## 三、 应用级别最佳实践示例
+
+## 四、 应用级别最佳实践示例
 * 见demos
 * 不推荐在element的js里用异步加载js，虽然支持这样的用法。理由是和整个element设计初衷相违背
 * 自由组合现有架构和技术选型
 
 
-## 四、 对比
+
+## 五、 对比
 ### Rosetta VS web components
 
 
