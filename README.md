@@ -6,13 +6,11 @@
 ## 一、 自定义element示例
     Rosetta的Custom Elements是开发UI的基础模块。Custom Elements是html、css、js的集合，构成一个完整、独立的功能单元。
 
-### 1、 示例1外链形式定义element
+### 1、定义element
 * html
 ```
     <element type="r-tab">
-        <link rel="import"  href="r-b.html">
-        <link rel="stylesheet" type="text/css" href="r-tab.css">
-        <script type="text/javascript" src="r-tab.js"></script>
+        <link rel="import" href="r-b.html">
 
         <template>
             <div class="tab-panel" onClick={ toggle }>
@@ -74,7 +72,7 @@
     }
 ```
 
-### 2、 示例2内联形式定义element
+### 2、完整的定义element
 * html + js + css
 
 ```
@@ -147,6 +145,7 @@
         <title></title>
     </head>
     <body>
+        <link rel="import" href="tabA"/>
         <r-tab name="tabA">
             <div class=".panel-a {$tpl.testClass}">
                 <div>{$tpl.aaa}</div>
@@ -164,12 +163,6 @@
         <r-xxx>
         </r-xxx>
         <script type="text/javascript" src="rosetta.js"></script>
-        <script type="text/javascript" src="combo.js">
-            Rosetta.element('r-tab', htmlFactory, afterRender);
-            Rosetta.element('r-xxx', htmlFactory, afterRender);
-
-            Rosetta.parseAll();
-        </script>
     </body>
     </html>
 ```
@@ -181,11 +174,10 @@
 * element由<element type="r-xxx">包裹
 * html由template包裹
 * js用script标签
-* css用link引用外链，style内联
+* css用style内联
 * element标签需要闭合
 * 标准的html标签不允许被覆盖
 * element命名规则：1、由'-'链接'r'和后缀名，比如r-tab，这里的'tab'就是后缀名
-
 
 
 ### 5、 css设置样式
@@ -290,6 +282,7 @@
         <title></title>
     </head>
     <body>
+        <link rel="import" href="r-tab.html">
         <r-tab name="tabA">
             <div class=".panel-a {$tpl.testClass}">
                 <div>{$tpl.aaa}</div>
@@ -316,10 +309,15 @@
 
 * 动态实例化一个element
 ```
-    Rosetta.create(name, root, attr);
+    Rosetta.create(name, attr);
 ```
 
-* 开始标签解析（编译阶段自动生成放置在所有element注册代码的后面）
+* 将element实例渲染到dom节点上
+```
+    Rosetta.render(Rosetta.create(name, attr), root, forceToReplace);
+```
+
+* 开始标签解析（runtime自动调用，无需手动执行。）
 ```
     Rosetta.init();
 ```
@@ -354,11 +352,10 @@
 * 初始化执行过程中的生命周期变化
     ** register注册element类
     ** 遍历element
-    ** 替换根节点root
-    ** 实例化类，传入root
+    ** 实例化类
     ** 执行拼接模版，渲染数据
-    ** append到root
-    ** 执行js逻辑
+    ** 执行自定义js render逻辑
+    ** append（或者replace）到root
 
 
 * 生命周期事件监听
@@ -722,7 +719,7 @@ Rosetta.settings.brackets
 
 
 ## 四、 对比
-### Rosetta VS web components系
+### Rosetta VS web components
 
 
 ### Rosetta VS react
