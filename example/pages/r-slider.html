@@ -1,0 +1,153 @@
+<element name="r-slider" onAttached={onAttached}>
+    <style type="text/css">
+        *,
+        *:before,
+        *:after {
+          -webkit-box-sizing: border-box;
+          box-sizing: border-box;
+        }
+        :host {
+          position: relative;
+          overflow: hidden;
+          height: 100%;
+        }
+        .boost-slider:after {
+          content: '';
+          display: block;
+          width: 100%;
+          padding-top: 50%;
+        }
+        :host .boost-slides {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+        }
+        /*.@{namespace}slider .@{namespace}slides:after{
+           content:"";
+           clear:both;
+           display: table;
+        }*/
+        :host .boost-slides li {
+          list-style: none;
+          position: absolute;
+          z-index: 1;
+          display: block;
+          width: 100%;
+          height: 100%;
+        }
+        :host .boost-slides li img {
+          width: 100%;
+          height: 100%;
+          position: absolute;
+          top: 0;
+          left: 0;
+        }
+        :host ol {
+          position: absolute;
+          padding: 0;
+          line-height: 0;
+          z-index: 3;
+        }
+        :host ol li {
+          display: inline-block;
+          margin: 0 6px;
+        }
+        :host ol li a {
+          width: 8px;
+          height: 8px;
+          display: block;
+        }
+        :host ol li a.boost-slider-active {
+          background-color: #0066cc;
+        }
+        /**
+         * Theme:   a1  底部圆形点
+         *
+         */
+        .boost-slider-a1 ol {
+          width: 100%;
+          text-align: center;
+          bottom: 5px;
+        }
+        .boost-slider-a1 ol li a {
+          background-color: rgba(0, 0, 0, 0.5);
+          cursor: pointer;
+          text-indent: -9999px;
+          border-radius: 50%;
+          -webkit-box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
+          box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
+        }
+        /**
+         *  Theme: a2  底部方块点
+         */
+        .boost-slider-a2 ol {
+          width: 100%;
+          text-align: center;
+          bottom: 5px;
+        }
+        .boost-slider-a2 ol li a {
+          background-color: rgba(255, 255, 255, 0.5);
+          cursor: pointer;
+          text-indent: -9999px;
+          -webkit-box-shadow: inset 0 0 3px rgba(255, 255, 255, 0.3);
+          box-shadow: inset 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+        /* 底部标题 */
+        :host .boost-slides li .boost-slider-title {
+          background-color: rgba(0, 0, 0, 0.6);
+          position: absolute;
+          bottom: 0;
+          padding: 8px 60px 8px 8px;
+          width: 100%;
+          color: #fff;
+          display: block;
+          word-wrap: normal;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+        }
+        .boost-slider-title ol {
+          width: 100%;
+          text-align: right;
+          bottom: 5px;
+          margin: 0 0 5px;
+        }
+        .boost-slider-title ol li {
+          display: inline-block;
+          margin: 0 6px;
+        }
+        .boost-slider-title ol li a {
+          width: 8px;
+          height: 8px;
+          display: block;
+          background-color: rgba(255, 255, 255, 0.5);
+          cursor: pointer;
+          text-indent: -9999px;
+          border-radius: 50%;
+          -webkit-box-shadow: inset 0 0 3px rgba(255, 255, 255, 0.3);
+          box-shadow: inset 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+        .boost-slider-title ol li a.boost-slider-active {
+          background-color: #0066cc;
+        }
+
+    </style>
+
+    <template>
+        <div ref="blend-slider" class="blend-slider">
+            <content selector=".blend-slides">
+            </content>
+        </div>
+    </template>
+    <script type="text/javascript">
+        Rosetta.register('r-slider', function(tag) {
+            function onAttached() {
+                $(tag.root).slider({"speed": 2000, "ratio": "small"});
+            }
+        });
+    </script>
+</element>

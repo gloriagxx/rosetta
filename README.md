@@ -1,6 +1,11 @@
 # rosetta
 
 
+# dist目录的rosetta
+* 支持ie版：rosetta-ie.js
+* 非ie版：rosetta.js
+
+
 # 快速开始
 
 ## 一、 自定义element示例

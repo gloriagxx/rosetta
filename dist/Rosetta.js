@@ -1,4 +1,25 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var Rosetta = require('./lib/rosetta.js'),
+
+    readyRE = /complete/,
+    ready = function(callback) {
+        if (readyRE.test(document.readyState) && document.body) {
+            callback();
+        } else {
+            if (!document.addEventListener) {
+                window.attachEvent('onload', callback);
+            } else {
+                document.addEventListener('DOMContentLoaded', function() {
+                    callback();
+                }, false);
+            }
+        }
+    };
+
+window.Rosetta = Rosetta;
+
+ready(Rosetta.init);
+},{"./lib/rosetta.js":3}],2:[function(require,module,exports){
 var plainDom = {
     content: 'content',
     a: 'a',
@@ -137,7 +158,7 @@ var plainDom = {
 };
 
 module.exports = plainDom;
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
     query = utils.query,
@@ -215,9 +236,9 @@ function createElemClass(type, renderFunc) {
 
     function destroy() {
         this.off();
-        this.root.remove();
-        delete ref(this.name);
+        this.root.parentElement.removeChild(this.root);
         this.trigger(DETACHED, this);
+        delete ref(this.name);
     }
 
     function on(type, listener, context, ifOnce) {
@@ -547,7 +568,7 @@ module.exports = Rosetta;
 
 
 
-},{"./supportEvent.js":3,"./utils.js":4}],3:[function(require,module,exports){
+},{"./supportEvent.js":4,"./utils.js":5}],4:[function(require,module,exports){
 var supportEvent = {
     // 只支持原生的
     onClick: 'click',
@@ -599,7 +620,7 @@ var supportEvent = {
 };
 
 module.exports = supportEvent;
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var plainDom = require('./plainDom.js'),
 
     isString = module.exports.isString = function(elem) {
@@ -757,25 +778,4 @@ var plainDom = require('./plainDom.js'),
         }
     };
 
-},{"./plainDom.js":1}],5:[function(require,module,exports){
-var Rosetta = require('./lib/rosetta.js'),
-
-    readyRE = /complete/,
-    ready = function(callback) {
-        if (readyRE.test(document.readyState) && document.body) {
-            callback();
-        } else {
-            if (!document.addEventListener) {
-                window.attachEvent('onload', callback);
-            } else {
-                document.addEventListener('DOMContentLoaded', function() {
-                    callback();
-                }, false);
-            }
-        }
-    };
-
-window.Rosetta = Rosetta;
-
-ready(Rosetta.init);
-},{"./lib/rosetta.js":2}]},{},[5]);
+},{"./plainDom.js":2}]},{},[1]);
