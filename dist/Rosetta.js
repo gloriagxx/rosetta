@@ -230,7 +230,7 @@ function createElemClass(type, renderFunc) {
         }
 
         extend(attr, options, true);
-        Rosetta.render(Rosetta.create(type, attr, children), root, true);
+        this.root = Rosetta.render(Rosetta.create(type, attr, children), root, true);
         this.trigger(ATTRIBUTECHANGE, this);
     }
 
@@ -421,7 +421,12 @@ function addElemClass(type, elemClass) {
 }
 
 function addElem(name, elemObj) {
-    refers[name] = elemObj;
+    if (!refers[name]) {
+        refers[name] = elemObj;
+    } else {
+        extend(refers[name].attrs, elemObj.attrs, true);
+    }
+
 }
 
 function render(obj, root, force) {
@@ -512,15 +517,15 @@ function create(type, attr) {
         }
 
         if (isString(type) && !isOriginalTag(type)) {
-            elemObj.renderFunc(elemObj);
-            elemObj.name = attr.ref ? attr.ref : '';
+            result.renderFunc(result);
+            result.name = attr.ref ? attr.ref : '';
+            extend(result.attrs, attr, true);
+
             if (!!attr.ref) {
-                addElem(attr.ref, elemObj);
+                addElem(attr.ref, result);
             }
 
-            extend(elemObj.attrs, attr, true);
-
-            elemObj.trigger(CREATED, elemObj);
+            result.trigger(CREATED, result);
         }
 
         return result;
