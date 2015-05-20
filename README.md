@@ -367,7 +367,7 @@
     ** created（初始化时派发）
     ** attached (html渲染到root后派发)
     ** detached（调用elemObj.destroy()时派发）
-    ** attributechanged（调用elemObj.update(attr)时派发）
+    ** attributechange（调用elemObj.update(attr)时派发）
 ```
     <element type="r-tab">
         <template>
@@ -380,7 +380,7 @@
                 tag.on('created', function() {
 
                 });
-                tag.on('attributechanged', function() {
+                tag.on('attributechange', function() {
 
                 });
                 tag.on('detached', function() {
