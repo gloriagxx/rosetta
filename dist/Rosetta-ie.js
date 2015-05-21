@@ -1895,6 +1895,11 @@ function replaceContent(obj) {
                 dom.parentElement.removeChild(dom);
             }
         }
+    } else {
+        for (var i in obj.holder) {
+            var dom = obj.holder[i];
+            dom.parentElement.removeChild(dom);
+        }
     }
 }
 
