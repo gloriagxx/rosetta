@@ -1972,13 +1972,9 @@ function render(obj, root, force) {
 
     if ((isDomNode(root) && root.getAttribute('type') == 'r-element') || force == true) {
         root.parentElement.replaceChild(obj.root, root);
-        obj.trigger(ATTACHED, obj);
-        obj.isAttached = true;
-        return obj.root;
     } else {
         if (root.isRosettaElem == true) {
             root.children = root.children || [];
-
             root.children.push(obj);
         } else {
             if (obj.root) {
@@ -1988,6 +1984,12 @@ function render(obj, root, force) {
             }
 
         }
+    }
+
+    if (obj.isRosettaElem == true) {
+        obj.trigger(ATTACHED, obj);
+        obj.isAttached = true;
+        return obj.root;
     }
 }
 
