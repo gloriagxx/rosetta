@@ -2274,7 +2274,6 @@ var plainDom = require('./plainDom.js'),
             }
         } catch (e) {
             try {
-                debugger;
                 value = JSON.parse(attr);
             } catch (e) {
                 value = attr;
