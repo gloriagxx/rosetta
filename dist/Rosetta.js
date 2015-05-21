@@ -466,7 +466,7 @@ function render(obj, root, force) {
             if (obj.root) {
                 root.appendChild(obj.root);
             } else {
-                root.innerHTML = obj;
+                root.appendChild(document.createTextNode(obj));
             }
 
         }
@@ -759,7 +759,12 @@ var plainDom = require('./plainDom.js'),
                 }
             }
         } catch (e) {
-            value = attr;
+            try {
+                debugger;
+                value = JSON.parse(attr);
+            } catch (e) {
+                value = attr;
+            }
         }
 
         return value;
