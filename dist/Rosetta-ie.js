@@ -1851,36 +1851,15 @@ function init() {
                 options[attr.name] = attr.nodeValue;
             }
 
-            var root = Rosetta.render(Rosetta.create(type, options, childrenArr), item, true),
-                newClass = (root.getAttribute('class') || '')? (root.getAttribute('class') || '') + ' ' + type : type;
-
-            root.setAttribute('class', newClass);
-            show.call(root);
+            Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
         }
     }
     allRendered = true;
     fire.call(Rosetta, 'ready');
 }
 
-function defaultDisplay(nodeName) {
-    var element, display;
-    var elementDisplay = {};
-    if (!elementDisplay[nodeName]) {
-        element = document.createElement(nodeName);
-        document.body.appendChild(element);
-        display = getComputedStyle(element, '').getPropertyValue("display");
-        element.parentNode.removeChild(element);
-        display == "none" && (display = "block");
-        elementDisplay[nodeName] = display;
-    }
-    return elementDisplay[nodeName];
-}
-
 function show () {
-    this.style.display == "none" && (this.style.display = '');
-    if (getComputedStyle(this, '').getPropertyValue("display") == "none") {
-        this.style.display = defaultDisplay(this.nodeName)
-    }
+    this.style.display = 'block';
 }
 
 function replaceContent(obj) {
@@ -1989,6 +1968,11 @@ function render(obj, root, force) {
     if (obj.isRosettaElem == true) {
         obj.trigger(ATTACHED, obj);
         obj.isAttached = true;
+        var type = obj.type;
+        newClass = (obj.root.getAttribute('class') || '')? (obj.root.getAttribute('class') || '') + ' ' + type : type;
+
+        obj.root.setAttribute('class', newClass);
+        show.call(obj.root);
         return obj.root;
     }
 }
