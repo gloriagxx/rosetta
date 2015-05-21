@@ -21,7 +21,7 @@
     "repository": "git@github.com:jiexuangao/rosetta.git",
     "scripts": {
         "dist": "browserify index.js > ./dist/Rosetta.js",
-        "dist-ie": "browserify index.js > ./dist/Rosetta-ie.js",
+        "dist-ie": "browserify index-ie.js > ./dist/Rosetta-ie.js",
         "test": "tape test/*.js"
     },
     "dependencies": {
