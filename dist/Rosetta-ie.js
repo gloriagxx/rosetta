@@ -1962,8 +1962,7 @@ function render(obj, root, force) {
             if (obj.root) {
                 root.appendChild(obj.root);
             } else {
-                // root.appendChild(document.createTextNode(obj));
-                root.innerHTML = unescape(obj);
+                root.innerHTML += obj;
             }
 
         }
