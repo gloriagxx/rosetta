@@ -22,9 +22,7 @@ var es5shim = require('./lib/es5-shim.js'),
 window.Rosetta = Rosetta;
 
 ready(Rosetta.init);
-var style = document.createElement('style');
-style.innerHTML = '.r-invisible { display: none};';
-document.head.appendChild(style);
+
 },{"./lib/es5-shim.js":2,"./lib/ie-shim.js":3,"./lib/rosetta.js":5}],2:[function(require,module,exports){
 /*!
  * https://github.com/es-shims/es5-shim
