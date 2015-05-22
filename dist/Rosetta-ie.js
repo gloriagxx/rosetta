@@ -22,6 +22,9 @@ var es5shim = require('./lib/es5-shim.js'),
 window.Rosetta = Rosetta;
 
 ready(Rosetta.init);
+var style = document.createElement('style');
+style.innerHTML = '.r-invisible { display: none};';
+document.head.appendChild(style);
 },{"./lib/es5-shim.js":2,"./lib/ie-shim.js":3,"./lib/rosetta.js":5}],2:[function(require,module,exports){
 /*!
  * https://github.com/es-shims/es5-shim
@@ -1673,6 +1676,7 @@ var plainDom = {
 
 module.exports = plainDom;
 },{}],5:[function(require,module,exports){
+/*@require ./rosetta.css*/
 var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
     query = utils.query,
@@ -1858,10 +1862,6 @@ function init() {
     fire.call(Rosetta, 'ready');
 }
 
-function show () {
-    this.style.display = 'block';
-}
-
 function replaceContent(obj) {
     obj.holder = {};
     var contents = query('content', obj.root);
@@ -1964,7 +1964,8 @@ function render(obj, root, force) {
             if (obj.root) {
                 root.appendChild(obj.root);
             } else {
-                root.appendChild(document.createTextNode(obj));
+                // root.appendChild(document.createTextNode(obj));
+                root.innerHTML = unescape(obj);
             }
 
         }
@@ -1976,8 +1977,7 @@ function render(obj, root, force) {
         var type = obj.type;
         newClass = (obj.root.getAttribute('class') || '')? (obj.root.getAttribute('class') || '') + ' ' + type : type;
 
-        obj.root.setAttribute('class', newClass);
-        show.call(obj.root);
+        obj.root.setAttribute('class', newClass.replace(/r-invisible/g, ''));
         return obj.root;
     }
 }

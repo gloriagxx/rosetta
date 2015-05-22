@@ -19,6 +19,7 @@ var Rosetta = require('./lib/rosetta.js'),
 window.Rosetta = Rosetta;
 
 ready(Rosetta.init);
+
 },{"./lib/rosetta.js":3}],2:[function(require,module,exports){
 var plainDom = {
     content: 'content',
@@ -159,6 +160,7 @@ var plainDom = {
 
 module.exports = plainDom;
 },{}],3:[function(require,module,exports){
+/*@require ./rosetta.css*/
 var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
     query = utils.query,
@@ -344,10 +346,6 @@ function init() {
     fire.call(Rosetta, 'ready');
 }
 
-function show () {
-    this.style.display = 'block';
-}
-
 function replaceContent(obj) {
     obj.holder = {};
     var contents = query('content', obj.root);
@@ -450,7 +448,8 @@ function render(obj, root, force) {
             if (obj.root) {
                 root.appendChild(obj.root);
             } else {
-                root.appendChild(document.createTextNode(obj));
+                // root.appendChild(document.createTextNode(obj));
+                root.innerHTML = unescape(obj);
             }
 
         }
@@ -462,8 +461,7 @@ function render(obj, root, force) {
         var type = obj.type;
         newClass = (obj.root.getAttribute('class') || '')? (obj.root.getAttribute('class') || '') + ' ' + type : type;
 
-        obj.root.setAttribute('class', newClass);
-        show.call(obj.root);
+        obj.root.setAttribute('class', newClass.replace(/r-invisible/g, ''));
         return obj.root;
     }
 }
