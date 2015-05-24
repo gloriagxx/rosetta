@@ -526,15 +526,21 @@
 
         <template>
             <div class="tab-panel" onClick={ toggle }>
-                {if (attrs.list.length > 0) {
-                    (attrs.list || []).map(function(item, index) {
-                      var className = 'bla-' + index;
+                {
+                    (function() {
+                        var arr = [];
+                        if (attrs.list) {
+                            arr.push(1);
+                            (attrs.list || []).map(function(item, index) {
+                                var className = 'bla-' + index;
 
-                      return (
-                        <li class={className}>{item}</li>
-                      )
-                    }
-                }}
+                                arr.push(<li class={className}>{item}</li>);
+                            })
+                        }
+
+                        return arr;
+                    })()
+                }
                 <content select=".panel-a">
 
                 </content>
