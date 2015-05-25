@@ -59,3 +59,12 @@ test('to plain array test', function(t) {
     t.deepEqual(rarray2, [1,2,'4']);
 
 });
+
+
+test('camelize test', function(t) {
+    t.plan(1);
+
+    var rstr = utils.camelize('r-sdsds');
+
+    t.equal(rstr, 'rSdsds');
+});
