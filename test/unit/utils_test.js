@@ -50,9 +50,9 @@ test('utils toType test', function(t) {
 test('to plain array test', function(t) {
     t.plan(2);
 
-    var rarray = utils.toPlainArray([[1,2,4], 'sadad', 'aaa', [121,45]]);
+    var rarray = utils.toPlainArray([[1,2,['aaa',222,'444']], 'sadad', 'aaa', [121,45]]);
 
-    t.deepEqual(rarray, [1,2,4,'sadad','aaa',121,45]);
+    t.deepEqual(rarray, [1,2,'aaa',222,'444','sadad','aaa',121,45]);
 
 
     var rarray2 = utils.toPlainArray([1,2,'4']);
