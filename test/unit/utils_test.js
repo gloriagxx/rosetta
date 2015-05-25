@@ -46,3 +46,16 @@ test('utils toType test', function(t) {
     t.deepEqual(rarray, [{"a":"sdfsd", "b":[1,2,3,4,{"c":2}]}, "ddd", {"dfdf":{"bbbb":"dfd"}}]);
 
 });
+
+test('to plain array test', function(t) {
+    t.plan(2);
+
+    var rarray = utils.toPlainArray([[1,2,4], 'sadad', 'aaa', [121,45]]);
+
+    t.deepEqual(rarray, [1,2,4,'sadad','aaa',121,45]);
+
+
+    var rarray2 = utils.toPlainArray([1,2,'4']);
+    t.deepEqual(rarray2, [1,2,'4']);
+
+});
