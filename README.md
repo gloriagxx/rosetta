@@ -1,6 +1,6 @@
 # rosetta
 
-[![Build Status](https://travis-ci.org/[jiexuangao]/[rosetta].png)](https://travis-ci.org/[jiexuangao]/[rosetta])
+[![Build Status](https://travis-ci.org/jiexuangao/rosetta.png)](https://travis-ci.org/jiexuangao/rosetta)
 
 # dist目录的rosetta
 * 支持ie版：rosetta-ie.js
