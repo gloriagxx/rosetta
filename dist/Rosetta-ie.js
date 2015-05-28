@@ -1836,8 +1836,14 @@ function createElemClass(type, renderFunc) {
 
 
 function init() {
+    var elems = null;
     allRendered = false;
-    var elems = query('.r-element');
+    if (!!document.getElementsByClassName) {
+        elems = document.getElementsByClassName('r-element');
+    } else {
+        elems = document.querySelectorAll('.r-element');
+    }
+
     for (var i = 0; i < elems.length; i++) {
         var item = elems[i],
             type = item.tagName.toLowerCase(),
