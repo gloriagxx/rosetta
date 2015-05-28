@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/jiexuangao/rosetta.png)](https://travis-ci.org/jiexuangao/rosetta)
 
-[![Sauce Test Status](https://saucelabs.com/buildstatus/rosetta)](https://saucelabs.com/u/rosetta)
+[![Sauce Test Status](https://saucelabs.com/buildstatus/gloriagao)](https://saucelabs.com/u/gloriagao)
 
 # dist目录的rosetta
 * 支持ie版：rosetta-ie.js
