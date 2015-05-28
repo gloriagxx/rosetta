@@ -2,10 +2,14 @@ language: node_js
 node_js:
 - '0.10'
 - '0.12'
+addons:
+  sauce_connect: true
 before_install:
 - npm install npm -g
+- npm install -g phantomjs --phantomjs_cdnurl=http://cnpmjs.org/downloads
 before_script:
 - npm install
+- npm install istanbul coveralls
 script: npm run test
 
 env:

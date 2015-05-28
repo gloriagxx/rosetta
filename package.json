@@ -3,43 +3,60 @@
     "version": "1.0.0",
     "description": "A Webcomponent-like javascript framework",
     "keywords": [
-
+        "rosetta",
+        "custom elements",
+        "template"
     ],
-    "author": "jiexuangao",
-    "homepage": "",
+    "author": "jiexuangao <jiexuangao@gmail.com>",
+    "homepage": "https://github.com/jiexuangao/rosetta",
     "contributors": [
         {
-            "name": ""
+            "name": "jiexuangao"
         }
     ],
     "bugs": {
-        "url": "",
-        "email": ""
+        "url": "https://github.com/jiexuangao/rosetta/issues",
+        "email": "jiexuangao@gmail.com"
     },
-    "main": "",
-    "bin": "",
+    "main": "index",
     "repository": "git@github.com:jiexuangao/rosetta.git",
     "scripts": {
         "dist": "browserify index.js > ./dist/Rosetta.js && browserify index-ie.js > ./dist/Rosetta-ie.js",
-        "test": "tape test/unit/*.js"
+        "test": "tape test/unit/*.js",
+
+        "cover": "istanbul cover --report html --print detail ./test/unit/*.js",
+        "view-cover": "istanbul report html && opn ./coverage/index.html",
+        "browser": "run-browser test/unit/*.js",
+        "phantom": "run-browser test/unit/*.js -b | tap-spec",
+        "travis-test": "npm run phantom && npm run cover && istanbul report lcov && ((cat coverage/lcov.info | coveralls) || exit 0)"
     },
     "dependencies": {
 
     },
     "devDependencies": {
         "browserify": "^9.0.7",
-        "tape": "~2.4.0"
+        "tape": "~2.4.0",
+        "istanbul": "^0.3.13",
+        "opn": "^1.0.1",
+        "run-browser": "^2.0.2",
+        "tap-dot": "^1.0.0",
+        "tap-spec": "^3.0.0",
+        "tape": "^4.0.0",
+        "zuul": "^2.1.1"
     },
     "testling": {
         "files": "test/*.js",
         "browsers": [
-            "ie/6..latest",
-            "chrome/41..latest",
-            "firefox/16..latest",
-            "safari/latest",
-            "opera/11.0..latest",
-            "iphone/6..latest",
-            "ipad/6..latest",
+            "ie/8..latest",
+            "firefox/17..latest",
+            "firefox/nightly",
+            "chrome/22..latest",
+            "chrome/canary",
+            "opera/12..latest",
+            "opera/next",
+            "safari/5.1..latest",
+            "ipad/5.0..latest",
+            "iphone/5.0..latest",
             "android-browser/2.1..latest"
         ]
     }
