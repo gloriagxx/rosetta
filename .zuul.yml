@@ -3,4 +3,31 @@ concurrency: 1
 browsers:
   - name: chrome
     version: latest
-    platform: Mac 10.6
+    # platform: [Linux, Mac 10.10, Mac 10.6, Mac 10.8, Mac 10.9, Windows 2003, Windows 2008, Windows 2012, Windows 2012 R2]
+
+  - name: internet explorer
+    version: latest
+    # platform: [Windows 2003, Windows 2008, Windows 2012, Windows 2012 R2]
+
+  # - name: firefox
+  #   version: latest
+  #   # platform: [Linux, Mac 10.10, Mac 10.6, Mac 10.9, Windows 2003, Windows 2008, Windows 2012, Windows 2012 R2]
+
+  # - name: iphone
+  #   version: latest
+  #   # platform: [Mac 10.10, Mac 10.6, Mac 10.8, Mac 10.9]
+
+  # - name: ipad
+  #   version: latest
+  #   # platform: [Mac 10.10, Mac 10.6, Mac 10.8, Mac 10.9]
+
+  # - name: android
+  #   version: latest
+
+  # - name: opera
+  #   version: latest
+  #   # platform: [Linux, Windows 2003, Windows 2008]
+
+  # - name: safari
+  #   version: latest
+  #   # platform: [Mac 10.10, Mac 10.6, Mac 10.8, Mac 10.9, Windows 2008]

@@ -8,10 +8,11 @@ before_install:
 - npm install npm -g
 - npm install -g run-browser
 - npm install -g phantomjs --phantomjs_cdnurl=http://cnpmjs.org/downloads
+- npm install -g zuul
 before_script:
 - npm install
 - npm install istanbul coveralls
-script: npm run test
+script: npm run travis-test
 
 
 env:

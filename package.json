@@ -28,7 +28,7 @@
         "view-cover": "istanbul report html && opn ./coverage/index.html",
         "browser": "run-browser test/unit/utils_test.js",
         "phantom": "run-browser test/unit/utils_test.js -b | tap-spec",
-        "travis-test": "npm run phantom && npm run cover && istanbul report lcov && ((cat coverage/lcov.info | coveralls) || exit 0)"
+        "travis-test": "npm run phantom && npm run cover && istanbul report lcov && ((cat coverage/lcov.info | coveralls) || exit 0) && zuul -- test/unit/*.js"
     },
     "dependencies": {
 

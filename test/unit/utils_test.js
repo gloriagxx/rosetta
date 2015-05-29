@@ -24,8 +24,8 @@ test('utils objToString test', function(t) {
     t.equal(rstring, '\'dfsasdfs\'');
 
 
-    var rfunc = utils.objToString(function(){alert(1)});
-    t.equal(rfunc, 'function (){alert(1)}');
+    var rfunc = utils.objToString(function(){alert(1);});
+    t.equal(typeof rfunc, 'string');
 
 
     var rspe = utils.objToString('&nbsp');
