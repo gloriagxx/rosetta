@@ -22,12 +22,12 @@
     "repository": "git@github.com:jiexuangao/rosetta.git",
     "scripts": {
         "dist": "browserify index.js > ./dist/Rosetta.js && browserify index-ie.js > ./dist/Rosetta-ie.js",
-        "test": "tape test/unit/*.js",
 
-        "cover": "istanbul cover --report html --print detail ./test/unit/*.js",
+        "test": "tape test/unit/utils_test.js",
+        "cover": "istanbul cover --report html --print detail ./test/unit/utils_test.js",
         "view-cover": "istanbul report html && opn ./coverage/index.html",
-        "browser": "run-browser test/unit/*.js",
-        "phantom": "run-browser test/unit/*.js -b | tap-spec",
+        "browser": "run-browser test/unit/utils_test.js",
+        "phantom": "run-browser test/unit/utils_test.js -b | tap-spec",
         "travis-test": "npm run phantom && npm run cover && istanbul report lcov && ((cat coverage/lcov.info | coveralls) || exit 0)"
     },
     "dependencies": {
