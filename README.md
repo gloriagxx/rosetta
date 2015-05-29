@@ -2,7 +2,9 @@
 
 [![Build Status](https://travis-ci.org/jiexuangao/rosetta.png)](https://travis-ci.org/jiexuangao/rosetta)
 
-[![Sauce Test Status](https://saucelabs.com/browser-matrix/gloria.svg)](https://saucelabs.com/u/gloria)
+<a href="https://saucelabs.com/u/gloria">
+  <img src="https://saucelabs.com/browser-matrix/gloria.svg" alt="Sauce Test Status"/>
+</a>
 
 # dist目录的rosetta
 * 支持ie版：rosetta-ie.js
