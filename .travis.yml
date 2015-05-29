@@ -11,7 +11,7 @@ before_install:
 before_script:
 - npm install
 - npm install istanbul coveralls
-script: npm run travis-test
+script: npm run test
 
 
 env:
