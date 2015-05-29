@@ -6,11 +6,11 @@
   <img src="https://saucelabs.com/browser-matrix/gloria.svg" alt="Sauce Test Status"/>
 </a>
 
-# dist目录的rosetta
+# 使用：
+dist目录的rosetta
 * 支持ie版：rosetta-ie.js
 * 非ie版：rosetta.js
 
-[详细文档](https://github.com/jiexuangao/rosetta/wiki)
-
-
+[脚手架](https://github.com/fis-scaffold/rosetta)
+[Rosetta详细文档](https://github.com/jiexuangao/rosetta/wiki)
 
