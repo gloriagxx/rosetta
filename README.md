@@ -7,7 +7,6 @@
 </a>
 
 # 使用：
-dist目录的rosetta
 * 支持ie版：rosetta-ie.js
 * 非ie版：rosetta.js
 
