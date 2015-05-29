@@ -1,5 +1,7 @@
 var utils = require('../../lib/utils.js');
 var test = require('tape');
+require('../../lib/ie-shim.js');
+require('../../lib/es5-shim.js');
 
 
 test('utils objToString test', function(t) {
