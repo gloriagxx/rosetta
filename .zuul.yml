@@ -7,7 +7,7 @@ browsers:
 
   - name: internet explorer
     version: 6..latest
-    platform: [Windows 2003, Windows 2008, Windows 2012, Windows 2012 R2]
+    platform: [Windows 2008, Windows 2012, Windows 2012 R2]
 
   - name: firefox
     version: 3.0..latest
