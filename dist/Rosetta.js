@@ -322,12 +322,20 @@ function createElemClass(type, renderFunc) {
 
 
 function init() {
-    var elems = null;
+    var elems = [];
     allRendered = false;
     if (!!document.getElementsByClassName) {
         elems = document.getElementsByClassName('r-element');
-    } else {
+    } else if (!!document.querySelectorAll) {
         elems = document.querySelectorAll('.r-element');
+    } else {
+        var doms = document.getElementsByTagName('*')
+        for (var i = 0; i < doms.length; i++) {
+            var item = doms[i];
+            if (item.tagName.toLowerCase().indexOf('r-') >= 0) {
+                elems.push(item);
+            }
+        }
     }
 
     for (var i = 0; i < elems.length; i++) {
@@ -440,7 +448,11 @@ function render(obj, root, force) {
                 obj.root.setAttribute(i, item);
             }
         } else {
-            obj.root.addEventListener(supportEvent[i], item, false);
+            if (obj.root.addEventListener) {
+                obj.root.addEventListener(supportEvent[i], item, false);
+            } else {
+                obj.root.attachEvent('on' + supportEvent[i], item);
+            }
         }
     }
 
