@@ -6,8 +6,8 @@ browsers:
   #   platform: [Linux, Mac 10.10, Mac 10.6, Mac 10.8, Mac 10.9, Windows 2008, Windows 2012, Windows 2012 R2]
 
   - name: internet explorer
-    version: 6..latest
-    platform: [Windows 2008, Windows 2012, Windows 2012 R2]
+    version: 8..latest
+
 
   # - name: firefox
   #   version: 3.0..latest
