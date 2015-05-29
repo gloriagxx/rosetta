@@ -23,7 +23,7 @@
     "scripts": {
         "dist": "browserify index.js > ./dist/Rosetta.js && browserify index-ie.js > ./dist/Rosetta-ie.js",
 
-        "test": "tape test/unit/utils_test.js",
+        "test": "tape test/unit/*.js",
         "cover": "istanbul cover --report html --print detail ./test/unit/utils_test.js",
         "view-cover": "istanbul report html && opn ./coverage/index.html",
         "browser": "run-browser test/unit/utils_test.js",

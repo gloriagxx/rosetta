@@ -2,18 +2,32 @@ ui: tape
 concurrency: 1
 browsers:
   - name: chrome
-    version: [26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, latest]
-  - name: ie
+    version: 26..latest
+    platform: [Linux, Mac 10.10, Mac 10.6, Mac 10.8, Mac 10.9, Windows 2003, Windows 2008, Windows 2012, Windows 2012 R2]
+
+  - name: internet explorer
     version: 6..latest
+    platform: [Windows 2003, Windows 2008, Windows 2012, Windows 2012 R2]
+
   - name: firefox
-    version: 3..latest
+    version: 3.0..latest
+    platform: [Linux, Mac 10.10, Mac 10.6, Mac 10.9, Windows 2003, Windows 2008, Windows 2012, Windows 2012 R2]
+
   - name: iphone
     version: 4.3..latest
+    platform: [Mac 10.10, Mac 10.6, Mac 10.8, Mac 10.9]
+
   - name: ipad
     version: 4.3..latest
+    platform: [Mac 10.10, Mac 10.6, Mac 10.8, Mac 10.9]
+
   - name: android
     version: 4.0..latest
+
   - name: opera
     version: 11..latest
+    platform: [Linux, Windows 2003, Windows 2008]
+
   - name: safari
     version: 5..latest
+    platform: [Mac 10.10, Mac 10.6, Mac 10.8, Mac 10.9, Windows 2008]
