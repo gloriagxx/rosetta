@@ -11,5 +11,6 @@
 * 非ie版：rosetta.js
 
 [脚手架](https://github.com/fis-scaffold/rosetta)
+
 [Rosetta详细文档](https://github.com/jiexuangao/rosetta/wiki)
 
