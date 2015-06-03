@@ -1,29 +1,4 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var es5shim = require('./lib/es5-shim.js'),
-    ieshim = require('./lib/ie-shim.js'),
-
-    Rosetta = require('./lib/rosetta.js'),
-
-    readyRE = /complete/,
-    ready = function(callback) {
-        if (readyRE.test(document.readyState) && document.body) {
-            callback();
-        } else {
-            if (!document.addEventListener) {
-                window.attachEvent('onload', callback);
-            } else {
-                document.addEventListener('DOMContentLoaded', function() {
-                    callback();
-                }, false);
-            }
-        }
-    };
-
-window.Rosetta = Rosetta;
-
-ready(Rosetta.init);
-
-},{"./lib/es5-shim.js":2,"./lib/ie-shim.js":3,"./lib/rosetta.js":5}],2:[function(require,module,exports){
 /*!
  * https://github.com/es-shims/es5-shim
  * @license es5-shim Copyright 2009-2015 by contributors, MIT License
@@ -1451,7 +1426,7 @@ if (parseInt(ws + '08') !== 8 || parseInt(ws + '0x16') !== 22) {
 }
 
 }));
-},{}],3:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 /**
 * Shim for "fixing" IE's lack of support (IE < 9) for applying slice
 * on host objects like NamedNodeMap, NodeList, and HTMLCollection
@@ -1534,7 +1509,7 @@ if (!window.getComputedStyle) {
         return this;
     }
 }
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 var plainDom = {
     content: 'content',
     a: 'a',
@@ -1673,7 +1648,7 @@ var plainDom = {
 };
 
 module.exports = plainDom;
-},{}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 /*@require ./rosetta.css*/
 var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
@@ -1987,12 +1962,12 @@ function render(obj, root, force) {
     }
 
     if (obj.isRosettaElem == true) {
-        obj.trigger(ATTACHED, obj);
         obj.isAttached = true;
         var type = obj.type;
         newClass = (obj.root.getAttribute('class') || '')? (obj.root.getAttribute('class') || '') + ' ' + type : type;
 
         obj.root.setAttribute('class', newClass.replace(/r-invisible/g, ''));
+        obj.trigger(ATTACHED, obj);
         return obj.root;
     }
 }
@@ -2090,7 +2065,7 @@ module.exports = Rosetta;
 
 
 
-},{"./supportEvent.js":6,"./utils.js":7}],6:[function(require,module,exports){
+},{"./supportEvent.js":5,"./utils.js":6}],5:[function(require,module,exports){
 var supportEvent = {
     // 只支持原生的
     onClick: 'click',
@@ -2142,7 +2117,7 @@ var supportEvent = {
 };
 
 module.exports = supportEvent;
-},{}],7:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 var plainDom = require('./plainDom.js'),
 
     isString = module.exports.isString = function(elem) {
@@ -2304,4 +2279,29 @@ var plainDom = require('./plainDom.js'),
         }
     };
 
-},{"./plainDom.js":4}]},{},[1]);
+},{"./plainDom.js":3}],7:[function(require,module,exports){
+var es5shim = require('./lib/es5-shim.js'),
+    ieshim = require('./lib/ie-shim.js'),
+
+    Rosetta = require('./lib/rosetta.js'),
+
+    readyRE = /complete/,
+    ready = function(callback) {
+        if (readyRE.test(document.readyState) && document.body) {
+            callback();
+        } else {
+            if (!document.addEventListener) {
+                window.attachEvent('onload', callback);
+            } else {
+                document.addEventListener('DOMContentLoaded', function() {
+                    callback();
+                }, false);
+            }
+        }
+    };
+
+window.Rosetta = Rosetta;
+
+ready(Rosetta.init);
+
+},{"./lib/es5-shim.js":1,"./lib/ie-shim.js":2,"./lib/rosetta.js":4}]},{},[7]);
