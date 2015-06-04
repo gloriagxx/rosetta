@@ -423,8 +423,8 @@ function render(obj, root, force) {
                 if (!isString(item)) {
                     item = objToString(item);
                 }
-                obj.root.setAttribute(i, item);
             }
+            obj.root.setAttribute(i, item || '');
         } else {
             if (obj.root.addEventListener) {
                 obj.root.addEventListener(supportEvent[i], item, false);
@@ -729,6 +729,12 @@ var plainDom = require('./plainDom.js'),
 
         try {
             value = eval(attr);
+
+            // fix ie bugs
+            if (!!attr && value == undefined) {
+                value = attr;
+                return value;
+            }
 
             if (isArray(value)) {
                 value.map(function(item, index) {
