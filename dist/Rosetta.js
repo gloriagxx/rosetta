@@ -10,6 +10,7 @@ var utils = require('./utils.js'),
     CREATED = lifeEvents.CREATED
     ATTRIBUTECHANGE = lifeEvents.ATTRIBUTECHANGE;
 
+
 function createElemClass(type, renderFunc) {
     function update(options) {
         // extend(this.attrs, options, true);
@@ -112,7 +113,6 @@ function createElemClass(type, renderFunc) {
 
     })(type, renderFunc);
 }
-
 
 module.exports = createElemClass;
 },{"./lifeEvents.js":2,"./utils.js":6}],2:[function(require,module,exports){
@@ -286,7 +286,12 @@ var supportEvent = require('./supportEvent.js'),
     CREATED = lifeEvents.CREATED
     ATTRIBUTECHANGE = lifeEvents.ATTRIBUTECHANGE;
 
-
+    // diff = require("./diff.js"),
+    // patch = require("./patch.js"),
+    // h = require("./h.js"),
+    // create = require("./create-element.js"),
+    // VNode = require('./vnode/vnode.js'),
+    // VText = require('./vnode/vtext.js');
 
 function init() {
     var elems = [];
@@ -398,11 +403,11 @@ function render(obj, root, force) {
     }
 
     if (obj.isRosettaElem == true) {
+        // content的判断
+
         obj.root = obj.__t(obj, obj.attrs, obj.ref);
 
         replaceContent(obj);
-    } else if (isDomNode(obj)) {
-        obj.root = obj;
     }
 
     for (var i in obj.attrs) {
@@ -415,11 +420,7 @@ function render(obj, root, force) {
             }
             obj.root.setAttribute(i, item || '');
         } else {
-            if (obj.root.addEventListener) {
-                obj.root.addEventListener(supportEvent[i], item, false);
-            } else {
-                obj.root.attachEvent('on' + supportEvent[i], item);
-            }
+            delegate(document.body, obj.root, i, item);
         }
     }
 
@@ -439,12 +440,16 @@ function render(obj, root, force) {
         }
     }
 
+
     if (obj.isRosettaElem == true) {
         obj.isAttached = true;
         var type = obj.type;
+
+
         newClass = (obj.root.getAttribute('class') || '')? (obj.root.getAttribute('class') || '') + ' ' + type : type;
 
         obj.root.setAttribute('class', newClass.replace(/r-invisible/g, ''));
+
         obj.trigger(ATTACHED, obj);
         return obj.root;
     }
@@ -480,7 +485,6 @@ function create(type, attr) {
         if (!!result) {
             for (var i = 0; i < children.length; i++) {
                 var item = children[i];
-                // content的判断
 
                 render(item, result);
             }
@@ -496,12 +500,35 @@ function create(type, attr) {
             }
 
             result.trigger(CREATED, result);
+        } else {
+            result.root = result;
         }
 
         return result;
     }
 
 }
+
+
+function delegate(parent, child, type, cb) {
+    var callback = function(event) {
+        obj = event.srcElement ? event.srcElement : event.target;
+        while(obj != parent.parentElement) {
+            if (obj != child) {
+                obj = obj.parentElement;
+            } else {
+                cb(event);
+            }
+        }
+    };
+
+    if (parent.addEventListener) {
+        parent.addEventListener(supportEvent[type], callback, false);
+    } else {
+        parent.attachEvent('on' + supportEvent[type], callback);
+    }
+}
+
 
 function register(type, renderFunc) {
     var elemClass = createElemClass(type, renderFunc);
