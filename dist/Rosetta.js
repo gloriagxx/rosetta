@@ -518,6 +518,7 @@ function delegate(parent, child, type, cb) {
                 obj = obj.parentElement;
             } else {
                 cb(event);
+                obj = obj.parentElement;
             }
         }
     };
