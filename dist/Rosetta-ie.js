@@ -1,4 +1,121 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var utils = require('./utils.js'),
+    bind = utils.bind,
+    fire = utils.fire,
+    isDomNode = utils.isDomNode,
+
+    lifeEvents = require('./lifeEvents.js'),
+    ATTACHED = lifeEvents.ATTACHED,
+    DETACHED = lifeEvents.DETACHED,
+    CREATED = lifeEvents.CREATED
+    ATTRIBUTECHANGE = lifeEvents.ATTRIBUTECHANGE;
+
+function createElemClass(type, renderFunc) {
+    function update(options) {
+        // extend(this.attrs, options, true);
+        var children = this.children,
+            attrs = this.root.attributes,
+            root = this.root,
+            type = this.type,
+            attr = {};
+
+        for (var n = 0; n < attrs.length; n++) {
+            var item = attrs[n];
+            attr[item.name] = item.nodeValue;
+        }
+
+        attr = toType(attr || '') || {};
+        extend(this.attrs, attr, options, true);
+        this.root = Rosetta.render(this, root, true);
+        this.trigger(ATTRIBUTECHANGE, this);
+    }
+
+    function destroy() {
+        this.off();
+        this.root.parentElement.removeChild(this.root);
+        this.trigger(DETACHED, this);
+        delete ref(this.name);
+    }
+
+    function on(type, listener, context, ifOnce) {
+        bind.call(this, type, listener, context, ifOnce);
+    }
+
+    function trigger(type) {
+        fire.call(this, type);
+    }
+
+    function off(type) {
+        if (!type) {
+            this.events = [];
+        }
+
+        delete this.events[type];
+    }
+
+    function once(type, listener, context) {
+        this.on(type, listener, context, true);
+    }
+
+
+    function create(type, attr) {
+        var obj = Rosetta.create.apply(Rosetta, arguments);
+        if (!!attr && !!attr.ref) {
+            if (obj.isRosettaElem == true) {
+                this.refs[attr.ref] = obj.root;
+            } else if (isDomNode(obj)) {
+                this.refs[attr.ref] = obj;
+            }
+        }
+
+        return obj;
+    }
+    return (function(type, renderFunc) {
+        function CustomElement(options) {
+            extend(this, {
+                type: type,
+
+                name: name,
+
+                renderFunc: renderFunc,
+
+                refs: {},
+
+                events: {},
+
+                isAttached: false,
+
+                attrs: {}
+            }, options || {}, true);
+        }
+
+        CustomElement.prototype = {
+            update: update,
+
+            destroy: destroy,
+
+            isRosettaElem: true,
+
+            on: on,
+
+            trigger: trigger,
+
+            off: off,
+
+            once: once,
+
+            create: create
+
+        };
+
+        return CustomElement;
+
+    })(type, renderFunc);
+}
+
+
+module.exports = createElemClass;
+},{"./lifeEvents.js":4,"./utils.js":8}],2:[function(require,module,exports){
 /*!
  * https://github.com/es-shims/es5-shim
  * @license es5-shim Copyright 2009-2015 by contributors, MIT License
@@ -1426,7 +1543,7 @@ if (parseInt(ws + '08') !== 8 || parseInt(ws + '0x16') !== 22) {
 }
 
 }));
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 /**
 * Shim for "fixing" IE's lack of support (IE < 9) for applying slice
 * on host objects like NamedNodeMap, NodeList, and HTMLCollection
@@ -1509,7 +1626,12 @@ if (!window.getComputedStyle) {
         return this;
     }
 }
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
+module.exports.ATTACHED = 'attached';
+module.exports.DETACHED = 'detached';
+module.exports.CREATED = 'created';
+module.exports.ATTRIBUTECHANGE = 'attributeChange';
+},{}],5:[function(require,module,exports){
 var plainDom = {
     content: 'content',
     a: 'a',
@@ -1648,7 +1770,7 @@ var plainDom = {
 };
 
 module.exports = plainDom;
-},{}],4:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /*@require ./rosetta.css*/
 var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
@@ -1661,153 +1783,20 @@ var supportEvent = require('./supportEvent.js'),
     isDomNode = utils.isDomNode,
     isString = utils.isString,
     isFunction = utils.isFunction,
+    bind = utils.bind,
+    fire = utils.fire,
 
-    ATTACHED = 'attached',
-    DETACHED = 'detached',
-    CREATED = 'created',
-    ATTRIBUTECHANGE = 'attributeChange',
     refers = {},
     _elemClass = {},
-    allRendered = false;
+    allRendered = false,
+    createElemClass = require('./createElementClass.js'),
 
+    lifeEvents = require('./lifeEvents.js'),
+    ATTACHED = lifeEvents.ATTACHED,
+    DETACHED = lifeEvents.DETACHED,
+    CREATED = lifeEvents.CREATED
+    ATTRIBUTECHANGE = lifeEvents.ATTRIBUTECHANGE;
 
-function bind(type, listener, context, ifOnce) {
-    this.events = this.events || {};
-    var queue = this.events[type] || (this.events[type] = []);
-    queue.push({
-        f: listener,
-        o: context,
-        ifOnce: ifOnce
-    });
-}
-
-function fire(type) {
-    this.events = this.events || {};
-    var slice = [].slice,
-        list = this.events[type];
-
-    if (!list) {
-        return;
-    }
-
-    var arg = slice.call(arguments, 1);
-    for (var i = 0, j = list.length; i < j; i++) {
-        var cb = list[i];
-        if (cb.f.apply(cb.o, arg) === false) {
-            break;
-        }
-
-        if (cb.ifOnce === true) {
-            list.splice(i, 1);
-            i--;
-            j--;
-        }
-    }
-}
-
-
-function createElemClass(type, renderFunc) {
-    function update(options) {
-        // extend(this.attrs, options, true);
-        var children = this.children,
-            attrs = this.root.attributes,
-            root = this.root,
-            type = this.type,
-            attr = {};
-
-        for (var n = 0; n < attrs.length; n++) {
-            var item = attrs[n];
-            attr[item.name] = item.nodeValue;
-        }
-
-        attr = toType(attr || '') || {};
-        extend(this.attrs, attr, options, true);
-        this.root = Rosetta.render(this, root, true);
-        this.trigger(ATTRIBUTECHANGE, this);
-    }
-
-    function destroy() {
-        this.off();
-        this.root.parentElement.removeChild(this.root);
-        this.trigger(DETACHED, this);
-        delete ref(this.name);
-    }
-
-    function on(type, listener, context, ifOnce) {
-        bind.call(this, type, listener, context, ifOnce);
-    }
-
-    function trigger(type) {
-        fire.call(this, type);
-    }
-
-    function off(type) {
-        if (!type) {
-            this.events = [];
-        }
-
-        delete this.events[type];
-    }
-
-    function once(type, listener, context) {
-        this.on(type, listener, context, true);
-    }
-
-
-    function create(type, attr) {
-        var obj = Rosetta.create.apply(Rosetta, arguments);
-        if (!!attr && !!attr.ref) {
-            if (obj.isRosettaElem == true) {
-                this.refs[attr.ref] = obj.root;
-            } else if (isDomNode(obj)) {
-                this.refs[attr.ref] = obj;
-            }
-        }
-
-        return obj;
-    }
-    return (function(type, renderFunc) {
-        function CustomElement(options) {
-            extend(this, {
-                type: type,
-
-                name: name,
-
-                renderFunc: renderFunc,
-
-                refs: {},
-
-                events: {},
-
-                isAttached: false,
-
-                attrs: {}
-            }, options || {}, true);
-        }
-
-        CustomElement.prototype = {
-            update: update,
-
-            destroy: destroy,
-
-            isRosettaElem: true,
-
-            on: on,
-
-            trigger: trigger,
-
-            off: off,
-
-            once: once,
-
-            create: create
-
-        };
-
-        return CustomElement;
-
-    })(type, renderFunc);
-}
 
 
 function init() {
@@ -2065,7 +2054,7 @@ module.exports = Rosetta;
 
 
 
-},{"./supportEvent.js":5,"./utils.js":6}],5:[function(require,module,exports){
+},{"./createElementClass.js":1,"./lifeEvents.js":4,"./supportEvent.js":7,"./utils.js":8}],7:[function(require,module,exports){
 var supportEvent = {
     // 只支持原生的
     onClick: 'click',
@@ -2117,7 +2106,7 @@ var supportEvent = {
 };
 
 module.exports = supportEvent;
-},{}],6:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 var plainDom = require('./plainDom.js'),
 
     isString = module.exports.isString = function(elem) {
@@ -2283,9 +2272,42 @@ var plainDom = require('./plainDom.js'),
             default:
                 return obj.toString();
         }
+    },
+    bind = module.exports.bind = function(type, listener, context, ifOnce) {
+        this.events = this.events || {};
+        var queue = this.events[type] || (this.events[type] = []);
+        queue.push({
+            f: listener,
+            o: context,
+            ifOnce: ifOnce
+        });
+    },
+
+    fire = module.exports.fire = function(type) {
+        this.events = this.events || {};
+        var slice = [].slice,
+            list = this.events[type];
+
+        if (!list) {
+            return;
+        }
+
+        var arg = slice.call(arguments, 1);
+        for (var i = 0, j = list.length; i < j; i++) {
+            var cb = list[i];
+            if (cb.f.apply(cb.o, arg) === false) {
+                break;
+            }
+
+            if (cb.ifOnce === true) {
+                list.splice(i, 1);
+                i--;
+                j--;
+            }
+        }
     };
 
-},{"./plainDom.js":3}],7:[function(require,module,exports){
+},{"./plainDom.js":5}],9:[function(require,module,exports){
 var es5shim = require('./lib/es5-shim.js'),
     ieshim = require('./lib/ie-shim.js'),
 
@@ -2310,4 +2332,4 @@ window.Rosetta = Rosetta;
 
 ready(Rosetta.init);
 
-},{"./lib/es5-shim.js":1,"./lib/ie-shim.js":2,"./lib/rosetta.js":4}]},{},[7]);
+},{"./lib/es5-shim.js":2,"./lib/ie-shim.js":3,"./lib/rosetta.js":6}]},{},[9]);
