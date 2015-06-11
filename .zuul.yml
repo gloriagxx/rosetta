@@ -20,4 +20,4 @@ browsers:
     version: 4.3..latest
 
   - name: internet explorer
-    version: 9..latest
+    version: 6..latest

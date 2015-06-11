@@ -2021,9 +2021,10 @@ function create(type, attr) {
 function delegate(parent, child, type, cb) {
     var callback = function(event) {
         obj = event.srcElement ? event.srcElement : event.target;
-        while(obj != parent.parentElement) {
+        while(!!obj && obj != parent.parentElement) {
             if (obj == child) {
                 cb(event);
+                break;
             }
             obj = obj.parentElement;
         }
