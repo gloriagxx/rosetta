@@ -1,126 +1,9 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var utils = require('./utils.js'),
-    bind = utils.bind,
-    fire = utils.fire,
-    isDomNode = utils.isDomNode,
-
-    lifeEvents = require('./lifeEvents.js'),
-    ATTACHED = lifeEvents.ATTACHED,
-    DETACHED = lifeEvents.DETACHED,
-    CREATED = lifeEvents.CREATED
-    ATTRIBUTECHANGE = lifeEvents.ATTRIBUTECHANGE;
-
-
-function createElemClass(type, renderFunc) {
-    function update(options) {
-        // extend(this.attrs, options, true);
-        var children = this.children,
-            attrs = this.root.attributes,
-            root = this.root,
-            type = this.type,
-            attr = {};
-
-        for (var n = 0; n < attrs.length; n++) {
-            var item = attrs[n];
-            attr[item.name] = item.nodeValue;
-        }
-
-        attr = toType(attr || '') || {};
-        extend(this.attrs, attr, options, true);
-        this.root = Rosetta.render(this, root, true);
-        this.trigger(ATTRIBUTECHANGE, this);
-    }
-
-    function destroy() {
-        this.off();
-        this.root.parentElement.removeChild(this.root);
-        this.trigger(DETACHED, this);
-        delete ref(this.name);
-    }
-
-    function on(type, listener, context, ifOnce) {
-        bind.call(this, type, listener, context, ifOnce);
-    }
-
-    function trigger(type) {
-        fire.call(this, type);
-    }
-
-    function off(type) {
-        if (!type) {
-            this.events = [];
-        }
-
-        delete this.events[type];
-    }
-
-    function once(type, listener, context) {
-        this.on(type, listener, context, true);
-    }
-
-
-    function create(type, attr) {
-        var obj = Rosetta.create.apply(Rosetta, arguments);
-        if (!!attr && !!attr.ref) {
-            if (obj.isRosettaElem == true) {
-                this.refs[attr.ref] = obj.root;
-            } else if (isDomNode(obj)) {
-                this.refs[attr.ref] = obj;
-            }
-        }
-
-        return obj;
-    }
-    return (function(type, renderFunc) {
-        function CustomElement(options) {
-            extend(this, {
-                type: type,
-
-                name: name,
-
-                renderFunc: renderFunc,
-
-                refs: {},
-
-                events: {},
-
-                isAttached: false,
-
-                attrs: {}
-            }, options || {}, true);
-        }
-
-        CustomElement.prototype = {
-            update: update,
-
-            destroy: destroy,
-
-            isRosettaElem: true,
-
-            on: on,
-
-            trigger: trigger,
-
-            off: off,
-
-            once: once,
-
-            create: create
-
-        };
-
-        return CustomElement;
-
-    })(type, renderFunc);
-}
-
-module.exports = createElemClass;
-},{"./lifeEvents.js":2,"./utils.js":6}],2:[function(require,module,exports){
 module.exports.ATTACHED = 'attached';
 module.exports.DETACHED = 'detached';
 module.exports.CREATED = 'created';
 module.exports.ATTRIBUTECHANGE = 'attributeChange';
-},{}],3:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 var plainDom = {
     content: 'content',
     a: 'a',
@@ -259,7 +142,7 @@ var plainDom = {
 };
 
 module.exports = plainDom;
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 /*@require ./rosetta.css*/
 var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
@@ -278,7 +161,6 @@ var supportEvent = require('./supportEvent.js'),
     refers = {},
     _elemClass = {},
     allRendered = false,
-    createElemClass = require('./createElementClass.js'),
 
     lifeEvents = require('./lifeEvents.js'),
     ATTACHED = lifeEvents.ATTACHED,
@@ -292,6 +174,111 @@ var supportEvent = require('./supportEvent.js'),
     // create = require("./create-element.js"),
     // VNode = require('./vnode/vnode.js'),
     // VText = require('./vnode/vtext.js');
+
+
+function createElemClass(type, renderFunc) {
+    function update(options) {
+        // extend(this.attrs, options, true);
+        var children = this.children,
+            attrs = this.root.attributes,
+            root = this.root,
+            type = this.type,
+            attr = {};
+
+        for (var n = 0; n < attrs.length; n++) {
+            var item = attrs[n];
+            attr[item.name] = item.nodeValue;
+        }
+
+        attr = toType(attr || '') || {};
+        extend(this.attrs, attr, options, true);
+        this.root = Rosetta.render(this, root, true);
+
+        this.trigger(ATTRIBUTECHANGE, this);
+    }
+
+    function destroy() {
+        this.off();
+        this.root.parentElement.removeChild(this.root);
+        this.trigger(DETACHED, this);
+        delete ref(this.name);
+    }
+
+    function on(type, listener, context, ifOnce) {
+        bind.call(this, type, listener, context, ifOnce);
+    }
+
+    function trigger(type) {
+        fire.call(this, type);
+    }
+
+    function off(type) {
+        if (!type) {
+            this.events = [];
+        }
+
+        delete this.events[type];
+    }
+
+    function once(type, listener, context) {
+        this.on(type, listener, context, true);
+    }
+
+
+    function create(type, attr) {
+        var obj = Rosetta.create.apply(Rosetta, arguments);
+        if (!!attr && !!attr.ref) {
+            if (obj.isRosettaElem == true) {
+                this.refs[attr.ref] = obj.root;
+            } else if (isDomNode(obj)) {
+                this.refs[attr.ref] = obj;
+            }
+        }
+
+        return obj;
+    }
+    return (function(type, renderFunc) {
+        function CustomElement(options) {
+            extend(this, {
+                type: type,
+
+                name: name,
+
+                renderFunc: renderFunc,
+
+                refs: {},
+
+                events: {},
+
+                isAttached: false,
+
+                attrs: {}
+            }, options || {}, true);
+        }
+
+        CustomElement.prototype = {
+            update: update,
+
+            destroy: destroy,
+
+            isRosettaElem: true,
+
+            on: on,
+
+            trigger: trigger,
+
+            off: off,
+
+            once: once,
+
+            create: create
+
+        };
+
+        return CustomElement;
+
+    })(type, renderFunc);
+}
 
 function init() {
     var elems = [];
@@ -393,15 +380,8 @@ function addElem(name, elemObj) {
     refers[name] = elemObj;
 }
 
-function render(obj, root, force) {
-    if (isString(root)) {
-        root = query(root)[0];
-    }
 
-    if (!obj) {
-        return;
-    }
-
+function updateDom(obj) {
     if (obj.isRosettaElem == true) {
         // content的判断
 
@@ -424,6 +404,10 @@ function render(obj, root, force) {
         }
     }
 
+    return obj;
+}
+
+function appendRoot(obj, root, force) {
     if ((isDomNode(root) && root.getAttribute('type') == 'r-element') || force == true) {
         root.parentElement.replaceChild(obj.root, root);
     } else {
@@ -439,7 +423,20 @@ function render(obj, root, force) {
 
         }
     }
+    return obj;
+}
 
+function render(obj, root, force) {
+    if (isString(root)) {
+        root = query(root)[0];
+    }
+
+    if (!obj) {
+        return;
+    }
+
+    obj = updateDom(obj);
+    obj = appendRoot(obj, root, force);
 
     if (obj.isRosettaElem == true) {
         obj.isAttached = true;
@@ -569,7 +566,7 @@ module.exports = Rosetta;
 
 
 
-},{"./createElementClass.js":1,"./lifeEvents.js":2,"./supportEvent.js":5,"./utils.js":6}],5:[function(require,module,exports){
+},{"./lifeEvents.js":1,"./supportEvent.js":4,"./utils.js":5}],4:[function(require,module,exports){
 var supportEvent = {
     // 只支持原生的
     onClick: 'click',
@@ -621,7 +618,7 @@ var supportEvent = {
 };
 
 module.exports = supportEvent;
-},{}],6:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var plainDom = require('./plainDom.js'),
 
     isString = module.exports.isString = function(elem) {
@@ -822,7 +819,7 @@ var plainDom = require('./plainDom.js'),
         }
     };
 
-},{"./plainDom.js":3}],7:[function(require,module,exports){
+},{"./plainDom.js":2}],6:[function(require,module,exports){
 var Rosetta = require('./lib/rosetta.js'),
 
     readyRE = /complete/,
@@ -844,4 +841,4 @@ window.Rosetta = Rosetta;
 
 ready(Rosetta.init);
 
-},{"./lib/rosetta.js":4}]},{},[7]);
+},{"./lib/rosetta.js":3}]},{},[6]);
