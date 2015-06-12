@@ -39,11 +39,6 @@ function once(type, listener, context) {
 }
 
 
-function addToRefs(ref, obj) {
-    obj.refs[ref] = obj;
-}
-
-
 function update(options) {
     var oldTree = this.vTree;
 
@@ -63,14 +58,19 @@ function destroy() {
 }
 
 function create(type, attr) {
-    var vTree = Rosetta.create.apply(Rosetta, arguments);
+    var obj = Rosetta.create.apply(Rosetta, arguments);
     // to update refs, something wrong here
 
     if (!!attr && !!attr.ref) {
-        addToRefs(attr.ref, this);
+        this.refs[attr.ref] = obj;
     }
 
-    return vTree;
+    if (obj.isRosettaElem == true) {
+        this.rosettaElems = this.rosettaElems || [];
+        this.rosettaElems.push(obj);
+    }
+
+    return obj;
 }
 
 
@@ -1782,6 +1782,9 @@ var plainDom = {
 
 module.exports = plainDom;
 },{}],7:[function(require,module,exports){
+// how to deal with subElements lifecycle
+// how to delegate event pf subElements
+
 var _refers = {},
     _elemClass = {},
     _allRendered = false;
@@ -1915,6 +1918,20 @@ function render(obj, root, force) {
         newClass = (dom.getAttribute('class') || '')? (dom.getAttribute('class') || '') + ' ' + obj.type : obj.type;
 
         dom.setAttribute('class', newClass.replace(/r-invisible/g, ''));
+
+        obj.isAttached = true;
+
+        function triggerChildren(obj) {
+            (obj.rosettaElems || []).map(function(item, index) {
+                triggerChildren(item.rosettaElems || []);
+
+                item.trigger(ATTACHED, obj);
+            });
+        }
+
+        triggerChildren(obj);
+
+        obj.trigger(ATTACHED, obj);
     }
 
     return dom;

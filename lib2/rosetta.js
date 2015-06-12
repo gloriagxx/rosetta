@@ -1,3 +1,6 @@
+// how to deal with subElements lifecycle
+// how to delegate event pf subElements
+
 var _refers = {},
     _elemClass = {},
     _allRendered = false;
@@ -131,6 +134,20 @@ function render(obj, root, force) {
         newClass = (dom.getAttribute('class') || '')? (dom.getAttribute('class') || '') + ' ' + obj.type : obj.type;
 
         dom.setAttribute('class', newClass.replace(/r-invisible/g, ''));
+
+        obj.isAttached = true;
+
+        function triggerChildren(obj) {
+            (obj.rosettaElems || []).map(function(item, index) {
+                triggerChildren(item.rosettaElems || []);
+
+                item.trigger(ATTACHED, obj);
+            });
+        }
+
+        triggerChildren(obj);
+
+        obj.trigger(ATTACHED, obj);
     }
 
     return dom;

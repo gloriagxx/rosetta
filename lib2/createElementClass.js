@@ -36,11 +36,6 @@ function once(type, listener, context) {
 }
 
 
-function addToRefs(ref, obj) {
-    obj.refs[ref] = obj;
-}
-
-
 function update(options) {
     var oldTree = this.vTree;
 
@@ -60,14 +55,19 @@ function destroy() {
 }
 
 function create(type, attr) {
-    var vTree = Rosetta.create.apply(Rosetta, arguments);
+    var obj = Rosetta.create.apply(Rosetta, arguments);
     // to update refs, something wrong here
 
     if (!!attr && !!attr.ref) {
-        addToRefs(attr.ref, this);
+        this.refs[attr.ref] = obj;
     }
 
-    return vTree;
+    if (obj.isRosettaElem == true) {
+        this.rosettaElems = this.rosettaElems || [];
+        this.rosettaElems.push(obj);
+    }
+
+    return obj;
 }
 
 
