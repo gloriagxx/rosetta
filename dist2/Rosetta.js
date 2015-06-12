@@ -73,9 +73,6 @@ function create(type, attr) {
         this.rosettaElems.push(obj);
     }
 
-    this.trigger(CREATED, this);
-    Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
-
     return obj;
 }
 
@@ -2047,9 +2044,8 @@ var Rosetta = {
 
     ready: ready,
 
-    triggerChildren: triggerChildren,
+    triggerChildren: triggerChildren
 
-    _refers: _refers
 };
 
 module.exports = Rosetta;

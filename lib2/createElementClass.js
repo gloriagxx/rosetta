@@ -70,9 +70,6 @@ function create(type, attr) {
         this.rosettaElems.push(obj);
     }
 
-    this.trigger(CREATED, this);
-    Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
-
     return obj;
 }
 
