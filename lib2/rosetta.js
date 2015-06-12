@@ -86,25 +86,57 @@ function elemClass(type, newClass) {
     }
 }
 
-function render(vTree, root, force) {
+
+function updateDom(obj) {
+    for (var i in obj.attrs) {
+        var item = obj.attrs[i];
+        if (!supportEvent[i]) {
+            if (!!item) {
+                if (!isString(item)) {
+                    item = objToString(item);
+                }
+            }
+            obj.root.setAttribute(i, item || '');
+        } else {
+            delegate(document.body, obj.root, i, item);
+        }
+    }
+
+    return obj;
+}
+
+function appendRoot(obj, root, force) {
+    root.parentElement.replaceChild(obj.root, root);
+    return obj;
+}
+
+function render(obj, root, force) {
     if (isString(root)) {
         root = query(root)[0];
     }
+
+    var vTree = obj.isRosettaElem == true ? obj.vTree : obj;
 
     if (!vTree || !root) {
         return;
     }
 
     var dom = createElement(vTree);
+    obj.root = dom;
 
-    if (force) {
-        // renderChild
-        root.parentElement.replaceChild(dom, root);
+    obj = updateDom(obj);
+    obj = appendRoot(obj, root, force);
+
+    if (obj.isRosettaElem == true) {
+        newClass = (dom.getAttribute('class') || '')? (dom.getAttribute('class') || '') + ' ' + obj.type : obj.type;
+
+        dom.setAttribute('class', newClass.replace(/r-invisible/g, ''));
     }
+
+    return dom;
 
     // dom and children events delegation
 }
-
 
 /**
  * Returns vTree of newly created element instance
@@ -124,13 +156,17 @@ function create(type, attr) {
     contentChildren.map(function(item, index) {
         if (typeof item == 'number') {
             contentChildren[index] = '' + item;
+        } else if(item.isRosettaElem == true) {
+            contentChildren[index] = item.vTree;
         }
     });
 
     attr = toType(attr || '') || {};
 
     if (isOriginalTag(type)) {
-        var vTree = h.call(this, type, attr, contentChildren);
+        var vTree = h.call(this, type, {
+            attributes: attr
+        }, contentChildren);
 
         return vTree;
     } else {
@@ -154,7 +190,7 @@ function create(type, attr) {
         elemObj.vTree = vTree;
         elemObj.trigger(CREATED, elemObj);
 
-        return elemObj.vTree;
+        return elemObj;
     }
 }
 

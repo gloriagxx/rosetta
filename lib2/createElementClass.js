@@ -42,10 +42,11 @@ function addToRefs(ref, obj) {
 
 
 function update(options) {
+    return;
     var oldTree = this.vTree;
 
     var attrs = extend(attrs, options, true);
-    var newTree = __t(this, attrs, this.refs);
+    var newTree = this.__t(this, attrs, this.refs);
     var patches = diff(oldTree, newTree);
     this.root = patch(this.root, patches);
 }
