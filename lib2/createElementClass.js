@@ -44,12 +44,15 @@ function update(options) {
     var newTree = this.__t(this, attrs, this.refs);
     var patches = diff(oldTree, newTree);
     this.root = patch(this.root, patches);
+    Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
+    this.trigger(ATTRIBUTECHANGE, this);
 }
 
 
 function destroy() {
     this.off();
     this.root.parentElement.removeChild(this.root);
+    Rosetta.triggerChildren(this, DETACHED);
     this.trigger(DETACHED, this);
     delete ref(this.name);
 }
@@ -66,6 +69,9 @@ function create(type, attr) {
         this.rosettaElems = this.rosettaElems || [];
         this.rosettaElems.push(obj);
     }
+
+    this.trigger(CREATED, this);
+    Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
 
     return obj;
 }

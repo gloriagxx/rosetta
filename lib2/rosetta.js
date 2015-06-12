@@ -108,6 +108,14 @@ function updateDom(obj) {
     return obj;
 }
 
+function triggerChildren(obj, type) {
+    (obj.rosettaElems || []).map(function(item, index) {
+        triggerChildren(item.rosettaElems || []);
+
+        item.trigger(type, obj);
+    });
+}
+
 function appendRoot(obj, root, force) {
     root.parentElement.replaceChild(obj.root, root);
     return obj;
@@ -137,15 +145,7 @@ function render(obj, root, force) {
 
         obj.isAttached = true;
 
-        function triggerChildren(obj) {
-            (obj.rosettaElems || []).map(function(item, index) {
-                triggerChildren(item.rosettaElems || []);
-
-                item.trigger(ATTACHED, obj);
-            });
-        }
-
-        triggerChildren(obj);
+        triggerChildren(obj, ATTACHED);
 
         obj.trigger(ATTACHED, obj);
     }
@@ -242,7 +242,9 @@ var Rosetta = {
 
     register: register,
 
-    ready: ready
+    ready: ready,
+
+    triggerChildren: triggerChildren
 };
 
 module.exports = Rosetta;
