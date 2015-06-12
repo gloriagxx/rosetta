@@ -2641,7 +2641,7 @@ function render(obj, root, force) {
     var dom = createElement(vTree);
     obj.root = dom;
 
-    obj = updateDom(obj);
+    // obj = updateDom(obj);
     obj = appendRoot(obj, root, force);
 
     if (obj.isRosettaElem == true) {
@@ -2725,8 +2725,6 @@ function create(type, attr) {
         elemObj.renderFunc(elemObj);
         elemObj.name = attr.ref ? attr.ref && ref(attr.ref, elemObj) : '';
         extend(elemObj.attrs, attr, true);
-
-        // elemObj.__t = updatevNodeContent(elemObj.__t, contentChildren);
 
         var vTree = elemObj.__t(elemObj, elemObj.attrs, elemObj.refs);
 
