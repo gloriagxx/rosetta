@@ -70,7 +70,7 @@ function stringPatch(domNode, leftVNode, vText, renderOptions) {
         var parentNode = domNode.parentNode
         newNode = render(vText, renderOptions)
 
-        if (parentNode && newNode !== domNode) {
+        if (parentNode) {
             parentNode.replaceChild(newNode, domNode)
         }
     }
@@ -105,7 +105,7 @@ function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
     var parentNode = domNode.parentNode
     var newNode = render(vNode, renderOptions)
 
-    if (parentNode && newNode !== domNode) {
+    if (parentNode) {
         parentNode.replaceChild(newNode, domNode)
     }
 
@@ -118,33 +118,64 @@ function destroyWidget(domNode, w) {
     }
 }
 
-function reorderChildren(domNode, moves) {
+function reorderChildren(domNode, bIndex) {
+    var children = []
     var childNodes = domNode.childNodes
-    var keyMap = {}
-    var node
-    var remove
-    var insert
+    var len = childNodes.length
+    var i
+    var reverseIndex = bIndex.reverse
 
-    for (var i = 0; i < moves.removes.length; i++) {
-        remove = moves.removes[i]
-        node = childNodes[remove.from]
-        if (remove.key) {
-            keyMap[remove.key] = node
-        }
-        domNode.removeChild(node)
+    for (i = 0; i < len; i++) {
+        children.push(domNode.childNodes[i])
     }
 
-    var length = childNodes.length
-    for (var j = 0; j < moves.inserts.length; j++) {
-        insert = moves.inserts[j]
-        node = keyMap[insert.key]
-        // this is the weirdest bug i've ever seen in webkit
-        domNode.insertBefore(node, insert.to >= length++ ? null : childNodes[insert.to])
+    var insertOffset = 0
+    var move
+    var node
+    var insertNode
+    var chainLength
+    var insertedLength
+    var nextSibling
+    for (i = 0; i < len;) {
+        move = bIndex[i]
+        chainLength = 1
+        if (move !== undefined && move !== i) {
+            // try to bring forward as long of a chain as possible
+            while (bIndex[i + chainLength] === move + chainLength) {
+                chainLength++;
+            }
+
+            // the element currently at this index will be moved later so increase the insert offset
+            if (reverseIndex[i] > i + chainLength) {
+                insertOffset++
+            }
+
+            node = children[move]
+            insertNode = childNodes[i + insertOffset] || null
+            insertedLength = 0
+            while (node !== insertNode && insertedLength++ < chainLength) {
+                domNode.insertBefore(node, insertNode);
+                node = children[move + insertedLength];
+            }
+
+            // the moved element came from the front of the array so reduce the insert offset
+            if (move + chainLength < i) {
+                insertOffset--
+            }
+        }
+
+        // element at this index is scheduled to be removed so increase insert offset
+        if (i in bIndex.removes) {
+            insertOffset++
+        }
+
+        i += chainLength
     }
 }
 
 function replaceRoot(oldRoot, newRoot) {
     if (oldRoot && newRoot && oldRoot !== newRoot && oldRoot.parentNode) {
+        console.log(oldRoot)
         oldRoot.parentNode.replaceChild(newRoot, oldRoot)
     }
 

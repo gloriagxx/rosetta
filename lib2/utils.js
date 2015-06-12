@@ -132,9 +132,13 @@ var plainDom = require('./plainDom.js'),
                     value[index] = toType(item);
                 });
             } else {
-                for (var i in value) {
-                    var v = value[i];
-                    value[i] = toType(v);
+                if (isPlainObject(value)) {
+                    for (var i in value) {
+                        var v = value[i];
+                        value[i] = toType(v);
+                    }
+                } else {
+                    value = attr;
                 }
             }
         } catch (e) {
