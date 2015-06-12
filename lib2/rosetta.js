@@ -198,7 +198,7 @@ function create(type, attr) {
     contentChildren.map(function(item, index) {
         if (typeof item == 'number') {
             contentChildren[index] = '' + item;
-        } else if(item.isRosettaElem == true) {
+        } else if(item && item.isRosettaElem == true) {
             contentChildren[index] = item.vTree;
         }
     });

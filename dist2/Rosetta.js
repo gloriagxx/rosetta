@@ -72,87 +72,28 @@ function once(type, listener, context) {
 
 
 function update(options) {
-    var oldTree = this.vTree;
-    var attrs = this.root.attributes,
+    var oldTree = this.vTree,
         root = this.root,
         type = this.type,
         attr = {};
 
-    for (var n = 0; n < attrs.length; n++) {
-        var item = attrs[n];
-        attr[item.name] = item.nodeValue;
+
+    for (var i in this.attrs) {
+        attr[i] = this.attrs[i];
     }
 
-    attr = toType(attr || '') || {};
-    attr = extend(attr, options);
+    attr = extend(attr, options, true);
 
     var newTree = this.__t(this, attr, this.refs);
 
-    // (function(__t, self, attr, refs) {
-    //     var a = {};
-    //     a.create = function(type, attr) {
-    //         if (!isString(type)) {
-    //             return;
-    //         }
-
-    //         attr = toType(attr || '') || {};
-    //         console.log(attr);
-
-    //         var contentChildren = [].slice.call(arguments, 2) || [];
-
-    //         contentChildren = toPlainArray(contentChildren);
-
-    //         contentChildren.map(function(item, index) {
-    //             if (typeof item == 'number') {
-    //                 contentChildren[index] = '' + item;
-    //             } else if(item.isRosettaElem == true) {
-    //                 contentChildren[index] = item.vTree;
-    //             }
-    //         });
-
-    //         var eventObj = {};
-    //         for (var i in attr) {
-    //             var item = attr[i];
-    //             if (supportEvent[i]) {
-    //                 eventObj['ev-' + supportEvent[i]] = item;
-    //                 var delegator = Delegator();
-    //                 delegator.listenTo(supportEvent[i]);
-    //             }
-    //         }
-
-    //         var newAttrs = extend({
-    //             attributes: attr
-    //         }, eventObj, true);
-
-
-    //         var vTree = h.call(this, type, newAttrs, contentChildren);
-    //         return vTree;
-    //     }
-
-    //     newTree = __t(a, attr, refs);
-    // })(this.__t, this, attr, this.refs)
-
     var patches = diff(oldTree, newTree);
-
     this.root = patch(this.root, patches);
-
     this.attrs = attr;
-    for (var i in this.attrs) {
-        var item = this.attrs[i];
-        if (!supportEvent[i]) {
-            if (!!item) {
-                if (!isString(item)) {
-                    item = objToString(item);
-                }
-            }
-            this.root.setAttribute(i, item || '');
-        }
-    }
+    this.vTree = newTree;
 
     Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
     this.trigger(ATTRIBUTECHANGE, this);
 }
-
 
 function destroy() {
     this.off();
