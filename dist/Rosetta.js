@@ -176,7 +176,6 @@ var supportEvent = require('./supportEvent.js'),
     // VText = require('./vnode/vtext.js');
 
 
-function createElemClass(type, renderFunc) {
     function update(options) {
         // extend(this.attrs, options, true);
         var children = this.children,
@@ -193,7 +192,7 @@ function createElemClass(type, renderFunc) {
         attr = toType(attr || '') || {};
         extend(this.attrs, attr, options, true);
         this.root = Rosetta.render(this, root, true);
-
+        console.log(this);
         this.trigger(ATTRIBUTECHANGE, this);
     }
 
@@ -237,6 +236,9 @@ function createElemClass(type, renderFunc) {
 
         return obj;
     }
+
+
+function createElemClass(type, renderFunc) {
     return (function(type, renderFunc) {
         function CustomElement(options) {
             extend(this, {

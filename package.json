@@ -23,6 +23,9 @@
     "scripts": {
         "dist": "browserify index.js > ./dist/Rosetta.js && browserify index-ie.js > ./dist/Rosetta-ie.js",
 
+        "dist2": "browserify index2.js > ./dist2/Rosetta.js",
+
+
         "test": "zuul -- test/unit/*.js",
         "cover": "istanbul cover --report html --print detail ./test/unit/utils_test.js",
         "view-cover": "istanbul report html && opn ./coverage/index.html",
