@@ -51,19 +51,12 @@ function update(options) {
         type = this.type,
         attr = {};
 
-
-    for (var i in this.attrs) {
-        attr[i] = this.attrs[i];
-    }
-
-    attr = extend(attr, options, true);
-
+    attr = extend(this.attrs, options, true);
     var newTree = this.__t(this, attr, this.refs);
-
     var patches = diff(oldTree, newTree);
     this.root = patch(this.root, patches);
-    this.attrs = attr;
     this.vTree = newTree;
+    this.attrs = attr;
 
     Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
     this.trigger(ATTRIBUTECHANGE, this);

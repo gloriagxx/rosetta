@@ -76,13 +76,14 @@ var plainDom = require('./plainDom.js'),
 
     toPlainArray = module.exports.toPlainArray = function(data, result) {
         if (!result) {
-            var result = [];
+            result = [];
         }
 
         for (var i = 0; i < data.length; i++) {
             var item = data[i];
+
             if (isArray(item)) {
-                toPlainArray(item, result);
+                result = result.concat(item);
             } else {
                 result.push(item);
             }

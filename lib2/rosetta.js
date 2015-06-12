@@ -7,6 +7,7 @@ var _refers = {},
 
 var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
+    isArray = utils.isArray,
     query = utils.query,
     toType = utils.toType,
     objToString = utils.objToString,
@@ -189,20 +190,28 @@ function create(type, attr) {
     }
 
     attr = toType(attr || '') || {};
-    console.log(attr);
 
-    var contentChildren = [].slice.call(arguments, 2) || [];
+    var arr = [].slice.call(arguments, 2);
+    var contentChildren = [];
 
-    contentChildren = toPlainArray(contentChildren);
+    function parseContentChildren(arr) {
+        arr.map(function(item, index) {
+            if (isArray(item)) {
+                parseContentChildren(item);
+            } else {
+                if (typeof item == 'number') {
+                    contentChildren.push('' + item);
+                } else if(item && item.isRosettaElem == true) {
+                    contentChildren.push(item.vTree);
+                } else {
+                    contentChildren.push(item);
+                }
+            }
+        });
+        return contentChildren;
+    }
 
-    contentChildren.map(function(item, index) {
-        if (typeof item == 'number') {
-            contentChildren[index] = '' + item;
-        } else if(item && item.isRosettaElem == true) {
-            contentChildren[index] = item.vTree;
-        }
-    });
-
+    contentChildren = parseContentChildren(arr);
     if (isOriginalTag(type)) {
         var eventObj = {};
         for (var i in attr) {
@@ -246,6 +255,7 @@ function create(type, attr) {
         return elemObj;
     }
 }
+
 
 function register(type, renderFunc) {
     var newClass = createElementClass(type, renderFunc);

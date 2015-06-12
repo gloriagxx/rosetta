@@ -77,19 +77,12 @@ function update(options) {
         type = this.type,
         attr = {};
 
-
-    for (var i in this.attrs) {
-        attr[i] = this.attrs[i];
-    }
-
-    attr = extend(attr, options, true);
-
+    attr = extend(this.attrs, options, true);
     var newTree = this.__t(this, attr, this.refs);
-
     var patches = diff(oldTree, newTree);
     this.root = patch(this.root, patches);
-    this.attrs = attr;
     this.vTree = newTree;
+    this.attrs = attr;
 
     Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
     this.trigger(ATTRIBUTECHANGE, this);
@@ -2495,6 +2488,7 @@ var _refers = {},
 
 var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
+    isArray = utils.isArray,
     query = utils.query,
     toType = utils.toType,
     objToString = utils.objToString,
@@ -2677,20 +2671,28 @@ function create(type, attr) {
     }
 
     attr = toType(attr || '') || {};
-    console.log(attr);
 
-    var contentChildren = [].slice.call(arguments, 2) || [];
+    var arr = [].slice.call(arguments, 2);
+    var contentChildren = [];
 
-    contentChildren = toPlainArray(contentChildren);
+    function parseContentChildren(arr) {
+        arr.map(function(item, index) {
+            if (isArray(item)) {
+                parseContentChildren(item);
+            } else {
+                if (typeof item == 'number') {
+                    contentChildren.push('' + item);
+                } else if(item && item.isRosettaElem == true) {
+                    contentChildren.push(item.vTree);
+                } else {
+                    contentChildren.push(item);
+                }
+            }
+        });
+        return contentChildren;
+    }
 
-    contentChildren.map(function(item, index) {
-        if (typeof item == 'number') {
-            contentChildren[index] = '' + item;
-        } else if(item.isRosettaElem == true) {
-            contentChildren[index] = item.vTree;
-        }
-    });
-
+    contentChildren = parseContentChildren(arr);
     if (isOriginalTag(type)) {
         var eventObj = {};
         for (var i in attr) {
@@ -2734,6 +2736,7 @@ function create(type, attr) {
         return elemObj;
     }
 }
+
 
 function register(type, renderFunc) {
     var newClass = createElementClass(type, renderFunc);
@@ -2904,13 +2907,14 @@ var plainDom = require('./plainDom.js'),
 
     toPlainArray = module.exports.toPlainArray = function(data, result) {
         if (!result) {
-            var result = [];
+            result = [];
         }
 
         for (var i = 0; i < data.length; i++) {
             var item = data[i];
+
             if (isArray(item)) {
-                toPlainArray(item, result);
+                result = result.concat(item);
             } else {
                 result.push(item);
             }
@@ -3595,7 +3599,6 @@ function reorderChildren(domNode, bIndex) {
 
 function replaceRoot(oldRoot, newRoot) {
     if (oldRoot && newRoot && oldRoot !== newRoot && oldRoot.parentNode) {
-        console.log(oldRoot)
         oldRoot.parentNode.replaceChild(newRoot, oldRoot)
     }
 
