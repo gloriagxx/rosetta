@@ -1852,7 +1852,9 @@ function init() {
                 options[attr.name] = attr.nodeValue;
             }
 
-            Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
+            var obj = Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
+            debugger;
+            ref(options.ref, obj);
         }
     }
     _allRendered = true;
@@ -1864,6 +1866,10 @@ function updatevNodeContent(vNodeFactory, contentChildren) {
 }
 
 function ref(key, value) {
+    if (!key) {
+        return;
+    }
+
     if (value != undefined) {
         _refers[key] = value;
     } else {
@@ -1939,9 +1945,7 @@ function render(obj, root, force) {
 
         obj.trigger(ATTACHED, obj);
     }
-
-    return dom;
-
+    return obj;
     // dom and children events delegation
 }
 
@@ -1971,6 +1975,15 @@ function create(type, attr) {
     attr = toType(attr || '') || {};
 
     if (isOriginalTag(type)) {
+        for (var i in attr) {
+            var item = attr[i];
+            if (supportEvent[i]) {
+                attr['ev-' + supportEvent[i]] = item;
+                delete attr[i];
+                console.log(attr);
+            }
+        }
+
         var vTree = h.call(this, type, {
             attributes: attr
         }, contentChildren);
@@ -2034,7 +2047,9 @@ var Rosetta = {
 
     ready: ready,
 
-    triggerChildren: triggerChildren
+    triggerChildren: triggerChildren,
+
+    _refers: _refers
 };
 
 module.exports = Rosetta;
