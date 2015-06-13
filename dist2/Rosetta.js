@@ -104,9 +104,9 @@ function create(type, attr) {
         this.refs[attr.ref] = obj;
     }
 
-    if (obj.isRosettaElem == true) {
+    if (obj.realObj && obj.realObj.isRosettaElem == true) {
         this.rosettaElems = this.rosettaElems || [];
-        this.rosettaElems.push(obj);
+        this.rosettaElems.push(obj.realObj);
     }
 
     return obj;
@@ -444,7 +444,7 @@ Delegator.transformHandle = DOMDelegator.transformHandle;
  * Safe for element IDs and server-side lookups.
  *
  * Extracted from CLCTR
- * 
+ *
  * Copyright (c) Eric Elliott 2012
  * MIT License
  */
@@ -510,7 +510,7 @@ Delegator.transformHandle = DOMDelegator.transformHandle;
 
       counter = safeCounter().toString(36).slice(-4);
 
-    return date.slice(-2) + 
+    return date.slice(-2) +
       counter + print + random;
   };
 
@@ -2516,6 +2516,8 @@ var createElementClass = require('./createElementClass.js');
 function init() {
     var elems = [];
     _allRendered = false;
+
+    var delegator = Delegator();
     if (!!document.getElementsByClassName) {
         elems = document.getElementsByClassName('r-element');
     } else if (!!document.querySelectorAll) {
@@ -2533,21 +2535,27 @@ function init() {
     for (var i = 0; i < elems.length; i++) {
         var item = elems[i],
             type = item.tagName.toLowerCase(),
-            attrs = item.attributes,
+            // attrs = item.attributes,
+            attrs = item.getAttribute('data');
             options = {};
 
         if (type.indexOf('r-') == 0) {
             var children = item.children,
                 childrenArr = [].slice.call(children);
 
-            for (var n = 0; n < attrs.length; n++) {
-                var attr = attrs[n];
-                options[attr.name] = attr.nodeValue;
-            }
+            // for (var n = 0; n < attrs.length; n++) {
+            //     var attr = attrs[n];
+            //     options[attr.name] = attr.nodeValue;
+            // }
+
+            options = JSON.parse(attrs);
 
             var obj = Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
 
-            ref(options.ref, obj);
+            if (options && options.ref) {
+                ref(options.ref, obj);
+            }
+
         }
     }
     _allRendered = true;
@@ -2558,24 +2566,6 @@ function updatevNodeContent(vNodeFactory, contentChildren) {
 
 }
 
-function delegate(parent, child, type, cb) {
-    var callback = function(event) {
-        obj = event.srcElement ? event.srcElement : event.target;
-        while(!!obj && obj != parent.parentElement) {
-            if (obj == child) {
-                cb(event);
-                break;
-            }
-            obj = obj.parentElement;
-        }
-    };
-
-    if (parent.addEventListener) {
-        parent.addEventListener(supportEvent[type], callback, false);
-    } else {
-        parent.attachEvent('on' + supportEvent[type], callback);
-    }
-}
 
 function ref(key, value) {
     if (!key) {
@@ -2597,23 +2587,6 @@ function elemClass(type, newClass) {
     }
 }
 
-
-function updateDom(obj) {
-    for (var i in obj.attrs) {
-        var item = obj.attrs[i];
-        if (!supportEvent[i]) {
-            if (!!item) {
-                if (!isString(item)) {
-                    item = objToString(item);
-                }
-            }
-            obj.root.setAttribute(i, item || '');
-        }
-    }
-
-    return obj;
-}
-
 function triggerChildren(obj, type) {
     (obj.rosettaElems || []).map(function(item, index) {
         triggerChildren(item.rosettaElems || []);
@@ -2627,12 +2600,12 @@ function appendRoot(obj, root, force) {
     return obj;
 }
 
-function render(obj, root, force) {
+function render(vTree, root, force) {
     if (isString(root)) {
         root = query(root)[0];
     }
 
-    var vTree = obj.isRosettaElem == true ? obj.vTree : obj;
+    var obj = vTree.realObj;
 
     if (!vTree || !root) {
         return;
@@ -2641,13 +2614,13 @@ function render(obj, root, force) {
     var dom = createElement(vTree);
     obj.root = dom;
 
-    // obj = updateDom(obj);
+    var classes = root.getAttribute('class');
     obj = appendRoot(obj, root, force);
 
     if (obj.isRosettaElem == true) {
-        newClass = (dom.getAttribute('class') || '')? (dom.getAttribute('class') || '') + ' ' + obj.type : obj.type;
+        var v = dom.getAttribute('class');
 
-        dom.setAttribute('class', newClass.replace(/r-invisible/g, ''));
+        dom.setAttribute('class', (v + ' ' + classes).replace(/r-invisible/g, ''));
 
         obj.isAttached = true;
 
@@ -2670,46 +2643,26 @@ function create(type, attr) {
         return;
     }
 
-    attr = toType(attr || '') || {};
+    var eventObj = {};
+    var childrenContent = [].slice.call(arguments, 2);
+    var vTree = '';
 
-    var arr = [].slice.call(arguments, 2);
-    var contentChildren = [];
-
-    function parseContentChildren(arr) {
-        arr.map(function(item, index) {
-            if (isArray(item)) {
-                parseContentChildren(item);
-            } else {
-                if (typeof item == 'number') {
-                    contentChildren.push('' + item);
-                } else if(item && item.isRosettaElem == true) {
-                    contentChildren.push(item.vTree);
-                } else {
-                    contentChildren.push(item);
-                }
-            }
-        });
-        return contentChildren;
+    for (var i in attr) {
+        var item = attr[i];
+        if (supportEvent[i]) {
+            eventObj['ev-' + supportEvent[i]] = item;
+        }
     }
 
-    contentChildren = parseContentChildren(arr);
-    if (isOriginalTag(type)) {
-        var eventObj = {};
-        for (var i in attr) {
-            var item = attr[i];
-            if (supportEvent[i]) {
-                eventObj['ev-' + supportEvent[i]] = item;
-                var delegator = Delegator();
-                delegator.listenTo(supportEvent[i]);
-            }
-        }
+    attr = attr || {};
 
+    if (isOriginalTag(type)) {
         var newAttrs = extend({
             attributes: attr
         }, eventObj, true);
 
 
-        var vTree = h.call(this, type, newAttrs, contentChildren);
+        vTree = h.call(this, type, newAttrs, childrenContent);
 
         return vTree;
     } else {
@@ -2726,12 +2679,13 @@ function create(type, attr) {
         elemObj.name = attr.ref ? attr.ref && ref(attr.ref, elemObj) : '';
         extend(elemObj.attrs, attr, true);
 
-        var vTree = elemObj.__t(elemObj, elemObj.attrs, elemObj.refs);
+        vTree = elemObj.__t(elemObj, elemObj.attrs, elemObj.refs);
 
         elemObj.vTree = vTree;
         elemObj.trigger(CREATED, elemObj);
+        vTree.realObj = elemObj;
 
-        return elemObj;
+        return vTree;
     }
 }
 
@@ -3167,7 +3121,7 @@ arguments[4][10][0].apply(exports,arguments)
 "use strict";
 
 module.exports = function isObject(x) {
-	return typeof x === "object" && x !== null;
+    return typeof x === "object" && x !== null;
 };
 
 },{}],33:[function(require,module,exports){
