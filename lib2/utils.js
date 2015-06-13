@@ -116,59 +116,6 @@ var plainDom = require('./plainDom.js'),
             );
     },
 
-    toType = module.exports.toType = function(attr) {
-        var value = null;
-
-        try {
-            value = eval(attr);
-
-            // fix ie bugs
-            if (!!attr && value == undefined) {
-                value = attr;
-                return value;
-            }
-
-            if (isArray(value)) {
-                value.map(function(item, index) {
-                    value[index] = toType(item);
-                });
-            } else {
-                if (isPlainObject(value)) {
-                    for (var i in value) {
-                        var v = value[i];
-                        value[i] = toType(v);
-                    }
-                } else {
-                    value = attr;
-                }
-            }
-        } catch (e) {
-            try {
-                value = JSON.parse(attr);
-            } catch (e) {
-                value = attr;
-            }
-        }
-
-        return value;
-    },
-
-    objToString = module.exports.objToString = function(obj, indeep) {
-        switch (typeof obj) {
-            case "string":
-                return "'" + obj + "'";
-            case "function":
-                return obj.name || obj.toString();
-            case "object":
-                var indent = Array(indeep || 1).join('\t'),
-                    isArray = Array.isArray(obj);
-                return ('{[' [+isArray] + Object.keys(obj).map(function(key) {
-                    return '\n\t' + indent + (isArray ? '' : key + ': ') + objToString(obj[key], (indeep || 1) + 1);
-                }).join(',') + '\n' + indent + '}]' [+isArray]).replace(/[\s\t\n]+(?=(?:[^\'"]*[\'"][^\'"]*[\'"])*[^\'"]*$)/g, '');
-            default:
-                return obj.toString();
-        }
-    },
     bind = module.exports.bind = function(type, listener, context, ifOnce) {
         this.events = this.events || {};
         var queue = this.events[type] || (this.events[type] = []);

@@ -444,7 +444,7 @@ Delegator.transformHandle = DOMDelegator.transformHandle;
  * Safe for element IDs and server-side lookups.
  *
  * Extracted from CLCTR
- *
+ * 
  * Copyright (c) Eric Elliott 2012
  * MIT License
  */
@@ -510,7 +510,7 @@ Delegator.transformHandle = DOMDelegator.transformHandle;
 
       counter = safeCounter().toString(36).slice(-4);
 
-    return date.slice(-2) +
+    return date.slice(-2) + 
       counter + print + random;
   };
 
@@ -2535,18 +2535,12 @@ function init() {
     for (var i = 0; i < elems.length; i++) {
         var item = elems[i],
             type = item.tagName.toLowerCase(),
-            // attrs = item.attributes,
             attrs = item.getAttribute('data');
             options = {};
 
         if (type.indexOf('r-') == 0) {
             var children = item.children,
                 childrenArr = [].slice.call(children);
-
-            // for (var n = 0; n < attrs.length; n++) {
-            //     var attr = attrs[n];
-            //     options[attr.name] = attr.nodeValue;
-            // }
 
             options = JSON.parse(attrs);
 
@@ -2555,7 +2549,6 @@ function init() {
             if (options && options.ref) {
                 ref(options.ref, obj);
             }
-
         }
     }
     _allRendered = true;
@@ -2612,9 +2605,9 @@ function render(vTree, root, force) {
     }
 
     var dom = createElement(vTree);
-    obj.root = dom;
-
     var classes = root.getAttribute('class');
+
+    obj.root = dom;
     obj = appendRoot(obj, root, force);
 
     if (obj.isRosettaElem == true) {
@@ -2899,59 +2892,6 @@ var plainDom = require('./plainDom.js'),
             );
     },
 
-    toType = module.exports.toType = function(attr) {
-        var value = null;
-
-        try {
-            value = eval(attr);
-
-            // fix ie bugs
-            if (!!attr && value == undefined) {
-                value = attr;
-                return value;
-            }
-
-            if (isArray(value)) {
-                value.map(function(item, index) {
-                    value[index] = toType(item);
-                });
-            } else {
-                if (isPlainObject(value)) {
-                    for (var i in value) {
-                        var v = value[i];
-                        value[i] = toType(v);
-                    }
-                } else {
-                    value = attr;
-                }
-            }
-        } catch (e) {
-            try {
-                value = JSON.parse(attr);
-            } catch (e) {
-                value = attr;
-            }
-        }
-
-        return value;
-    },
-
-    objToString = module.exports.objToString = function(obj, indeep) {
-        switch (typeof obj) {
-            case "string":
-                return "'" + obj + "'";
-            case "function":
-                return obj.name || obj.toString();
-            case "object":
-                var indent = Array(indeep || 1).join('\t'),
-                    isArray = Array.isArray(obj);
-                return ('{[' [+isArray] + Object.keys(obj).map(function(key) {
-                    return '\n\t' + indent + (isArray ? '' : key + ': ') + objToString(obj[key], (indeep || 1) + 1);
-                }).join(',') + '\n' + indent + '}]' [+isArray]).replace(/[\s\t\n]+(?=(?:[^\'"]*[\'"][^\'"]*[\'"])*[^\'"]*$)/g, '');
-            default:
-                return obj.toString();
-        }
-    },
     bind = module.exports.bind = function(type, listener, context, ifOnce) {
         this.events = this.events || {};
         var queue = this.events[type] || (this.events[type] = []);
@@ -3121,7 +3061,7 @@ arguments[4][10][0].apply(exports,arguments)
 "use strict";
 
 module.exports = function isObject(x) {
-    return typeof x === "object" && x !== null;
+	return typeof x === "object" && x !== null;
 };
 
 },{}],33:[function(require,module,exports){

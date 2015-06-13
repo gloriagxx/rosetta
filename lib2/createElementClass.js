@@ -78,9 +78,9 @@ function create(type, attr) {
         this.refs[attr.ref] = obj;
     }
 
-    if (obj.isRosettaElem == true) {
+    if (obj.realObj && obj.realObj.isRosettaElem == true) {
         this.rosettaElems = this.rosettaElems || [];
-        this.rosettaElems.push(obj);
+        this.rosettaElems.push(obj.realObj);
     }
 
     return obj;
