@@ -61,6 +61,9 @@ function h(tagName, properties, children) {
 }
 
 function addChild(c, childNodes, tag, props) {
+    if (typeof c == 'number') {
+        c = '' + c;
+    }
     if (typeof c === 'string') {
         childNodes.push(new VText(c));
     } else if (isChild(c)) {

@@ -2565,16 +2565,14 @@ function init() {
 
 
         if (type.indexOf('r-') == 0) {
-            // var attrs = item.getAttribute('data');
-            var attrs = item.attributes;
+            var attrs = item.attributes || {};
 
             var children = item.children,
                 childrenArr = [].slice.call(children);
 
-            // options = JSON.parse(attrs) || {};
-            for(var i = 0; i < attrs.length; i++) {
-                var k = attrs[i];
-                options[k.name] = k.nodeValue;
+            for(var n = 0; n < attrs.length; n++) {
+                var k = attrs[n];
+                options[k.name] = k.value;
             }
 
             var obj = Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
@@ -2585,6 +2583,7 @@ function init() {
 
     fire.call(Rosetta, 'ready');
 }
+
 
 function ref(key, value) {
     if (!key) {
@@ -3871,6 +3870,9 @@ function h(tagName, properties, children) {
 }
 
 function addChild(c, childNodes, tag, props) {
+    if (typeof c == 'number') {
+        c = '' + c;
+    }
     if (typeof c === 'string') {
         childNodes.push(new VText(c));
     } else if (isChild(c)) {
