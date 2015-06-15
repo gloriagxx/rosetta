@@ -19,6 +19,8 @@ var supportEvent = require('./supportEvent.js'),
     isFunction = utils.isFunction,
     bind = utils.bind,
     fire = utils.fire,
+    deserializeValue = utils.deserializeValue,
+    typeHandlers = utils.typeHandlers,
 
     lifeEvents = require('./lifeEvents.js'),
     ATTACHED = lifeEvents.ATTACHED,
@@ -31,6 +33,24 @@ var h = require('./virtual-dom/h'),
 
 var Delegator = require('./dom-delegator');
 var createElementClass = require('./createElementClass.js');
+
+function attributeToAttrs(name, value) {
+  // try to match this attribute to a property (attributes are
+  // all lower-case, so this is case-insensitive search)
+    if (name) {
+        // filter out 'mustached' values, these are to be
+        // get original value
+        var currentValue = this.attrs[name];
+        // deserialize Boolean or Number values from attribute
+        var value = deserializeValue(value, currentValue);
+        // only act if the value has changed
+        if (value !== currentValue) {
+            // install new value (has side-effects)
+            this.attrs[name] = value;
+        }
+  }
+
+}
 
 function init() {
     var elems = [];
@@ -54,14 +74,17 @@ function init() {
     for (var i = 0; i < elems.length; i++) {
         var item = elems[i],
             type = item.tagName.toLowerCase(),
-            attrs = item.getAttribute('data');
+            attrs = item.attributes;
             options = {};
 
         if (type.indexOf('r-') == 0) {
             var children = item.children,
                 childrenArr = [].slice.call(children);
 
-            options = JSON.parse(attrs);
+            for (var n = 0; n < attrs.length; n++) {
+                var attr = attrs[n];
+                options[attr.name] = attr.nodeValue;
+            }
 
             var obj = Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
 
@@ -150,17 +173,17 @@ function render(vTree, root, force) {
  * @method create
  * @return {Object} vTree
  */
-function create(type, attr) {
-    if (!isString(type)) {
-        return;
-    }
 
+function getRealAttr(attr, toRealType) {
     var eventObj = {};
-    var childrenContent = [].slice.call(arguments, 2);
-    var vTree = '';
 
     for (var i in attr) {
         var item = attr[i];
+
+        if (toRealType === true) {
+            attributeToAttrs.call(this, i, item);
+        }
+
         if (supportEvent[i]) {
             eventObj['ev-' + supportEvent[i]] = item;
         }
@@ -168,11 +191,28 @@ function create(type, attr) {
 
     attr = attr || {};
 
+    return {
+        eventObj: eventObj,
+        attr: attr
+    }
+}
+
+function create(type, attr) {
+    if (!isString(type)) {
+        return;
+    }
+
+    var childrenContent = [].slice.call(arguments, 2);
+    var vTree = '';
+
     if (isOriginalTag(type)) {
+        var tmp = getRealAttr(attr);
+        var eventObj = tmp.eventObj;
+        attr = tmp.attr;
+
         var newAttrs = extend({
             attributes: attr
         }, eventObj, true);
-
 
         vTree = h.call(this, type, newAttrs, childrenContent);
 
@@ -188,8 +228,11 @@ function create(type, attr) {
         elemObj = new NewClass();
 
         elemObj.renderFunc(elemObj);
+
+
         elemObj.name = attr.ref ? attr.ref && ref(attr.ref, elemObj) : '';
-        extend(elemObj.attrs, attr, true);
+
+        getRealAttr.call(elemObj, attr, true);
 
         vTree = elemObj.__t(elemObj, elemObj.attrs, elemObj.refs);
 
