@@ -28,6 +28,8 @@ var supportEvent = require('./supportEvent.js'),
     CREATED = lifeEvents.CREATED
     ATTRIBUTECHANGE = lifeEvents.ATTRIBUTECHANGE;
 
+var _shouldReplacedContent = [];
+
 var h = require('./virtual-dom/h'),
     createElement = require('./virtual-dom/create-element');
 
@@ -49,6 +51,9 @@ function attributeToAttrs(name, value) {
             this.attrs[name] = value;
         }
   }
+
+}
+function updatevNodeContent(vNodeFactory, contentChildren) {
 
 }
 
@@ -74,17 +79,15 @@ function init() {
     for (var i = 0; i < elems.length; i++) {
         var item = elems[i],
             type = item.tagName.toLowerCase(),
-            attrs = item.attributes;
             options = {};
+
+        var attrs = item.getAttribute('data');
 
         if (type.indexOf('r-') == 0) {
             var children = item.children,
                 childrenArr = [].slice.call(children);
 
-            for (var n = 0; n < attrs.length; n++) {
-                var attr = attrs[n];
-                options[attr.name] = attr.nodeValue;
-            }
+            options = JSON.parse(attrs);
 
             var obj = Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
 
@@ -96,11 +99,6 @@ function init() {
     _allRendered = true;
     fire.call(Rosetta, 'ready');
 }
-
-function updatevNodeContent(vNodeFactory, contentChildren) {
-
-}
-
 
 function ref(key, value) {
     if (!key) {
@@ -130,10 +128,34 @@ function triggerChildren(obj, type) {
     });
 }
 
-function appendRoot(obj, root, force) {
-    root.parentElement.replaceChild(obj.root, root);
-    return obj;
+function appendRoot(dom, root, force) {
+    root.parentElement.replaceChild(dom, root);
 }
+
+function getRealAttr(attr, toRealType) {
+    var eventObj = {};
+
+    for (var i in attr) {
+        var item = attr[i];
+
+        // if (toRealType === true) {
+        //     attributeToAttrs.call(this, i, item);
+        // }
+
+        if (supportEvent[i]) {
+            eventObj['ev-' + supportEvent[i]] = item;
+        }
+    }
+
+    attr = attr || {};
+
+    return {
+        eventObj: eventObj,
+        attr: attr
+    }
+}
+
+
 
 function render(vTree, root, force) {
     if (isString(root)) {
@@ -150,7 +172,41 @@ function render(vTree, root, force) {
     var classes = root.getAttribute('class');
 
     obj.root = dom;
-    obj = appendRoot(obj, root, force);
+
+    var contents = query('content', obj.root);
+    (contents || []).map(function(content, index){
+        var parent = $(content).parents('[isrosettaelem=true]')[0];
+        var num = parent.getAttribute('shouldReplacedContent');
+        var children = _shouldReplacedContent[parseInt(num)];
+
+        var newWrapper = document.createElement('div');
+        newWrapper.setAttribute('class', 'content');
+        content.parentElement.replaceChild(newWrapper, content);
+
+
+
+        var tmp = document.createDocumentFragment();
+        for (var i = 0; i < children.length; i++) {
+            var n = children[i];
+
+            tmp.appendChild(n);
+        }
+        var selector = content.getAttribute('selector');
+        var result = query(selector, tmp);
+
+
+        (children || []).map(function(child, i) {
+            if (result.indexOf(child) >= 0) {
+                newWrapper.appendChild(child);
+            }
+        });
+
+        if ($(newWrapper).children().length <= 0) {
+            newWrapper.parentElement.removeChild(newWrapper);
+        }
+    });
+
+    appendRoot(obj.root, root, force);
 
     if (obj.isRosettaElem == true) {
         var v = dom.getAttribute('class');
@@ -167,35 +223,13 @@ function render(vTree, root, force) {
     // dom and children events delegation
 }
 
+
 /**
  * Returns vTree of newly created element instance
  *
  * @method create
  * @return {Object} vTree
  */
-
-function getRealAttr(attr, toRealType) {
-    var eventObj = {};
-
-    for (var i in attr) {
-        var item = attr[i];
-
-        if (toRealType === true) {
-            attributeToAttrs.call(this, i, item);
-        }
-
-        if (supportEvent[i]) {
-            eventObj['ev-' + supportEvent[i]] = item;
-        }
-    }
-
-    attr = attr || {};
-
-    return {
-        eventObj: eventObj,
-        attr: attr
-    }
-}
 
 function create(type, attr) {
     if (!isString(type)) {
@@ -234,7 +268,12 @@ function create(type, attr) {
 
         getRealAttr.call(elemObj, attr, true);
 
+
         vTree = elemObj.__t(elemObj, elemObj.attrs, elemObj.refs);
+
+        vTree.properties.attributes.isrosettaelem = true;
+        _shouldReplacedContent.push(childrenContent[0]);
+        vTree.properties.attributes.shouldReplacedContent = _shouldReplacedContent.length - 1;
 
         elemObj.vTree = vTree;
         elemObj.trigger(CREATED, elemObj);
