@@ -62,6 +62,7 @@ function init() {
     _allRendered = false;
 
     var delegator = Delegator();
+
     if (!!document.getElementsByClassName) {
         elems = document.getElementsByClassName('r-element');
     } else if (!!document.querySelectorAll) {
@@ -81,22 +82,26 @@ function init() {
             type = item.tagName.toLowerCase(),
             options = {};
 
-        var attrs = item.getAttribute('data');
 
         if (type.indexOf('r-') == 0) {
+            // var attrs = item.getAttribute('data');
+            var attrs = item.attributes;
+
             var children = item.children,
                 childrenArr = [].slice.call(children);
 
-            options = JSON.parse(attrs) || {};
+            // options = JSON.parse(attrs) || {};
+            for(var i = 0; i < attrs.length; i++) {
+                var k = attrs[i];
+                options[k.name] = k.nodeValue;
+            }
 
             var obj = Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
-
-            if (options && options.ref) {
-                ref(options.ref, obj);
-            }
         }
     }
+
     _allRendered = true;
+
     fire.call(Rosetta, 'ready');
 }
 
@@ -138,9 +143,9 @@ function getRealAttr(attr, toRealType) {
     for (var i in attr) {
         var item = attr[i];
 
-        // if (toRealType === true) {
-        //     attributeToAttrs.call(this, i, item);
-        // }
+        if (toRealType === true && !_allRendered) {
+            attributeToAttrs.call(this, i, item);
+        }
 
         if (supportEvent[i]) {
             eventObj['ev-' + supportEvent[i]] = item;
@@ -219,10 +224,13 @@ function render(vTree, root, force) {
 
         obj.isAttached = true;
 
+        ref(obj.attrs.ref, obj);
+
         triggerChildren(obj, ATTACHED);
 
         obj.trigger(ATTACHED, obj);
     }
+
     return obj;
     // dom and children events delegation
 }
@@ -273,7 +281,7 @@ function create(type, attr) {
         elemObj.name = attr.ref ? attr.ref && ref(attr.ref, elemObj) : '';
 
         getRealAttr.call(elemObj, attr, true);
-        elemObj.attrs = attr;
+        elemObj.attrs = elemObj.attrs || attr;
 
         vTree = elemObj.__t(elemObj, elemObj.attrs, elemObj.refs);
 
@@ -296,7 +304,6 @@ function create(type, attr) {
         return vTree;
     }
 }
-
 
 function register(type, renderFunc) {
     var newClass = createElementClass(type, renderFunc);
