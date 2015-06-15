@@ -2568,7 +2568,7 @@ function init() {
             var children = item.children,
                 childrenArr = [].slice.call(children);
 
-            options = JSON.parse(attrs);
+            options = JSON.parse(attrs) || {};
 
             var obj = Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
 
@@ -2637,7 +2637,6 @@ function getRealAttr(attr, toRealType) {
 }
 
 
-
 function render(vTree, root, force) {
     if (isString(root)) {
         root = query(root)[0];
@@ -2687,6 +2686,11 @@ function render(vTree, root, force) {
         }
     });
 
+    for (var key in obj.refs) {
+        var node = query('[ref="' + key + '"]', dom);
+        obj.refs[key] = node;
+    }
+
     appendRoot(obj.root, root, force);
 
     if (obj.isRosettaElem == true) {
@@ -2718,6 +2722,8 @@ function create(type, attr) {
     }
 
     var childrenContent = [].slice.call(arguments, 2);
+
+    childrenContent = toPlainArray(childrenContent);
     var vTree = '';
 
     if (isOriginalTag(type)) {
@@ -2748,13 +2754,21 @@ function create(type, attr) {
         elemObj.name = attr.ref ? attr.ref && ref(attr.ref, elemObj) : '';
 
         getRealAttr.call(elemObj, attr, true);
-
+        elemObj.attrs = attr;
 
         vTree = elemObj.__t(elemObj, elemObj.attrs, elemObj.refs);
 
         vTree.properties.attributes.isrosettaelem = true;
-        _shouldReplacedContent.push(childrenContent[0]);
-        vTree.properties.attributes.shouldReplacedContent = _shouldReplacedContent.length - 1;
+        if (childrenContent) {
+            childrenContent.map(function(item, index) {
+                if (item.properties) {
+                    childrenContent[index] = createElement(item);
+                }
+            });
+
+            _shouldReplacedContent.push(childrenContent);
+            vTree.properties.attributes.shouldReplacedContent = _shouldReplacedContent.length - 1;
+        }
 
         elemObj.vTree = vTree;
         elemObj.trigger(CREATED, elemObj);
