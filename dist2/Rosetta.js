@@ -269,7 +269,13 @@ DOMDelegator.prototype.listenTo = function listenTo(eventName) {
             createHandler(eventName, this)
     }
 
-    this.target.addEventListener(eventName, listener, true)
+    if (this.target.addEventListener) {
+        this.target.addEventListener(eventName, listener, true)
+    } else {
+        this.target.attachEvent('on' + eventName, listener);
+    }
+
+
 }
 
 DOMDelegator.prototype.unlistenTo = function unlistenTo(eventName) {
@@ -294,9 +300,14 @@ DOMDelegator.prototype.unlistenTo = function unlistenTo(eventName) {
             "unlisten to " + eventName)
     }
 
-    this.target.removeEventListener(eventName, listener, true)
-}
+    if (this.target.removeEventListener) {
+        this.target.removeEventListener(eventName, listener, true)
+    } else {
+        this.target.dettachEvent(eventName, listener)
+    }
 
+
+}
 function createHandler(eventName, delegator) {
     var globalListeners = delegator.globalListeners;
     var delegatorTarget = delegator.target;
