@@ -2640,6 +2640,18 @@ function getRealAttr(attr, toRealType) {
     }
 }
 
+function getParent(dom) {
+    var parent = dom.parentElement;
+    if (!parent) {
+        return ;
+    }
+
+    if (parent.getAttribute('isrosettaelem') == 'true') {
+        return parent;
+    } else {
+        return getParent(parent);
+    }
+}
 
 function render(vTree, root, force) {
     if (isString(root)) {
@@ -2659,15 +2671,13 @@ function render(vTree, root, force) {
 
     var contents = query('content', obj.root);
     (contents || []).map(function(content, index){
-        var parent = $(content).parents('[isrosettaelem=true]')[0];
+        var parent = getParent(content);
         var num = parent.getAttribute('shouldReplacedContent');
         var children = _shouldReplacedContent[parseInt(num)];
 
         var newWrapper = document.createElement('div');
         newWrapper.setAttribute('class', 'content');
         content.parentElement.replaceChild(newWrapper, content);
-
-
 
         var tmp = document.createDocumentFragment();
         for (var i = 0; i < children.length; i++) {
@@ -2685,7 +2695,7 @@ function render(vTree, root, force) {
             }
         });
 
-        if ($(newWrapper).children().length <= 0) {
+        if (newWrapper.children.length <= 0) {
             newWrapper.parentElement.removeChild(newWrapper);
         }
     });
