@@ -33,7 +33,7 @@
 
 # [性能测试](https://github.com/jiexuangao/rosetta/wiki/%E5%85%BC%E5%AE%B9%E6%80%A7%E5%92%8C%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95)
 
-下面的测试结果是在下述环境中跑出来的：
+下面的测试结果是V1.0.1基于下述环境的测试结果：
 Chrome Version 41.0.2272.101 (64-bit) OSX 10.10.3 of Macbook Pro
 
 [![Sample results for Chrome Version 41.0.2272.101 (64-bit) OSX 10.10.3 of Macbook Pro](https://raw.githubusercontent.com/jiexuangao/todomvc-perf-comparison/master/sampleResult.png)][runner]
@@ -43,6 +43,5 @@ Chrome Version 41.0.2272.101 (64-bit) OSX 10.10.3 of Macbook Pro
 
 #Roadmap
 * v1.0.0
-* v1.0.1
-
+* v1.0.1 接口无任何改动；升级核心渲染逻辑
 
