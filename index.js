@@ -1,4 +1,6 @@
-var Rosetta = require('./lib/rosetta.js'),
+var es5shim = require('./lib/shims.js'),
+
+    Rosetta = require('./lib/rosetta.js'),
 
     readyRE = /complete/,
     ready = function(callback) {
