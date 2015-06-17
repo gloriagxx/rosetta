@@ -297,7 +297,7 @@ function create(type, attr) {
         vTree.properties.attributes.isrosettaelem = true;
         if (childrenContent) {
             childrenContent.map(function(item, index) {
-                if (item.properties) {
+                if (!item.nodeType) {
                     childrenContent[index] = createElement(item);
                 }
             });
