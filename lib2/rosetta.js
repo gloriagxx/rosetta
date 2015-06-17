@@ -33,7 +33,7 @@ var _shouldReplacedContent = [];
 var h = require('./virtual-dom/h'),
     createElement = require('./virtual-dom/create-element');
 
-var Delegator = require('./dom-delegator');
+// var Delegator = require('./dom-delegator');
 var createElementClass = require('./createElementClass.js');
 
 function attributeToAttrs(name, value) {
@@ -53,15 +53,52 @@ function attributeToAttrs(name, value) {
   }
 
 }
-function updatevNodeContent(vNodeFactory, contentChildren) {
 
+function handleEvent() {
+    var commonCB = function(e) {
+        var item = e.target || e.srcElement;
+        var eType = e.type;
+
+        function fireCB (item) {
+            if (!item) {
+                return;
+            }
+
+            var cbAttribute = item.getAttribute('on' + eType);
+
+            if (!!cbAttribute) {
+                eval('('+ cbAttribute +')')()
+            }
+
+            var parent = item.parentElement;
+            if (!!parent) {
+                fireCB(parent);
+            }
+        }
+
+        fireCB(item);
+    }
+
+    if (document.body.addEventListener) {
+        for (var key in supportEvent) {
+            var eventType = supportEvent[key];
+
+            document.body.addEventListener(eventType, commonCB, false);
+        }
+    } else {
+        for (var key in supportEvent) {
+            var eventType = supportEvent[key];
+
+            window.attachEvent('on' + eventType, commonCB);
+        }
+    }
 }
 
 function init() {
     var elems = [];
     _allRendered = false;
 
-    var delegator = Delegator();
+    // var delegator = Delegator();
 
     if (!!document.getElementsByClassName) {
         elems = document.getElementsByClassName('r-element');
@@ -96,6 +133,8 @@ function init() {
             var obj = Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
         }
     }
+
+    handleEvent();
 
     _allRendered = true;
 

@@ -20,10 +20,6 @@ var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
     isString = utils.isString;
 
-
-var Delegator = require('./dom-delegator');
-
-
 function on(type, listener, context, ifOnce) {
     bind.call(this, type, listener, context, ifOnce);
 }
