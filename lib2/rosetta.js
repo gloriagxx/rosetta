@@ -83,15 +83,6 @@ function init() {
             options = {};
 
         if (type.indexOf('r-') == 0) {
-            // // bug fixed for ie8 and before, http://knockoutjs.com/documentation/component-custom-elements.html#note-custom-elements-and-internet-explorer-6-to-8
-
-            // var ua = ['MSIE 6.0', 'MSIE 7.0', 'MSIE 8.0'];
-            // for (var i = 0; i < ua.length; i++) {
-            //     if (navigator.userAgent.indexOf(ua[i]) > 0) {
-            //         document.createElement(type);
-            //     }
-            // }
-
             var attrs = item.attributes || {};
 
             var children = item.children,
