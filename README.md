@@ -1,4 +1,4 @@
-# rosetta
+# Rosetta
 
 [![Build Status](https://travis-ci.org/jiexuangao/rosetta.png)](https://travis-ci.org/jiexuangao/rosetta)
 
