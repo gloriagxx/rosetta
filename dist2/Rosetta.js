@@ -2625,7 +2625,17 @@ function triggerChildren(obj, type) {
 }
 
 function appendRoot(dom, root, force) {
-    root.parentElement.replaceChild(dom, root);
+    var classes = root.getAttribute('class');
+
+    if (force == true) {
+        var v = dom.getAttribute('class');
+        dom.setAttribute('class', (v + ' ' + classes).replace(/r-invisible/g, ''));
+        root.parentElement.replaceChild(dom, root);
+    } else {
+        root.appendChild(dom);
+        root.setAttribute('class', classes.replace(/r-invisible/g, ''));
+    }
+
 }
 
 function getRealAttr(attr, toRealType) {
@@ -2676,52 +2686,48 @@ function render(vTree, root, force) {
     }
 
     var dom = createElement(vTree);
-    var classes = root.getAttribute('class');
 
-    obj.root = dom;
+    if (obj && obj.isRosettaElem == true) {
+        obj.root = dom;
 
-    var contents = query('content', obj.root);
-    (contents || []).map(function(content, index){
-        var parent = getParent(content);
-        var num = parent.getAttribute('shouldReplacedContent');
-        var children = _shouldReplacedContent[parseInt(num)];
+        var contents = query('content', obj.root);
 
-        var newWrapper = document.createElement('div');
-        newWrapper.setAttribute('class', 'content');
-        content.parentElement.replaceChild(newWrapper, content);
+        (contents || []).map(function(content, index){
+            var parent = getParent(content);
+            var num = parent.getAttribute('shouldReplacedContent');
+            var children = _shouldReplacedContent[parseInt(num)];
 
-        var tmp = document.createDocumentFragment();
-        for (var i = 0; i < children.length; i++) {
-            var n = children[i];
+            var newWrapper = document.createElement('div');
+            newWrapper.setAttribute('class', 'content');
+            content.parentElement.replaceChild(newWrapper, content);
 
-            tmp.appendChild(n);
-        }
-        var selector = content.getAttribute('selector');
-        var result = query(selector, tmp);
+            var tmp = document.createDocumentFragment();
+            for (var i = 0; i < children.length; i++) {
+                var n = children[i];
+
+                tmp.appendChild(n);
+            }
+            var selector = content.getAttribute('selector');
+            var result = query(selector, tmp);
 
 
-        (children || []).map(function(child, i) {
-            if (result.indexOf(child) >= 0) {
-                newWrapper.appendChild(child);
+            (children || []).map(function(child, i) {
+                if (result.indexOf(child) >= 0) {
+                    newWrapper.appendChild(child);
+                }
+            });
+
+            if (newWrapper.children.length <= 0) {
+                newWrapper.parentElement.removeChild(newWrapper);
             }
         });
 
-        if (newWrapper.children.length <= 0) {
-            newWrapper.parentElement.removeChild(newWrapper);
+        for (var key in obj.refs) {
+            var node = query('[ref="' + key + '"]', dom);
+            obj.refs[key] = node;
         }
-    });
 
-    for (var key in obj.refs) {
-        var node = query('[ref="' + key + '"]', dom);
-        obj.refs[key] = node;
-    }
-
-    appendRoot(obj.root, root, force);
-
-    if (obj.isRosettaElem == true) {
-        var v = dom.getAttribute('class');
-
-        dom.setAttribute('class', (v + ' ' + classes).replace(/r-invisible/g, ''));
+        appendRoot(dom, root, force);
 
         obj.isAttached = true;
 
@@ -2730,9 +2736,12 @@ function render(vTree, root, force) {
         triggerChildren(obj, ATTACHED);
 
         obj.trigger(ATTACHED, obj);
+
+        return obj;
+    } else {
+        appendRoot(dom, root, force);
     }
 
-    return obj;
     // dom and children events delegation
 }
 
