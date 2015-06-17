@@ -80,6 +80,8 @@ function update(options) {
     this.vTree = newTree;
     this.attrs = attr;
 
+    Rosetta.updateRefs(this, this.root);
+
     Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
     this.trigger(ATTRIBUTECHANGE, this);
 }
@@ -2531,8 +2533,11 @@ function attributeToAttrs(name, value) {
         // filter out 'mustached' values, these are to be
         // get original value
         var currentValue = this.attrs[name];
-        // deserialize Boolean or Number values from attribute
-        var value = deserializeValue(value, currentValue);
+        if (!_allRendered) {
+            // deserialize Boolean or Number values from attribute
+            value = deserializeValue(value, currentValue);
+        }
+
         // only act if the value has changed
         if (value !== currentValue) {
             // install new value (has side-effects)
@@ -2541,8 +2546,12 @@ function attributeToAttrs(name, value) {
   }
 
 }
-function updatevNodeContent(vNodeFactory, contentChildren) {
 
+function updateRefs(obj, dom) {
+    for (var key in obj.refs) {
+        var node = query('[ref="' + key + '"]', dom);
+        obj.refs[key] = node;
+    }
 }
 
 function init() {
@@ -2639,7 +2648,7 @@ function getRealAttr(attr, toRealType) {
     for (var i in attr) {
         var item = attr[i];
 
-        if (toRealType === true && !_allRendered) {
+        if (toRealType === true) {
             attributeToAttrs.call(this, i, item);
         }
 
@@ -2717,10 +2726,7 @@ function render(vTree, root, force) {
             }
         });
 
-        for (var key in obj.refs) {
-            var node = query('[ref="' + key + '"]', dom);
-            obj.refs[key] = node;
-        }
+        updateRefs(obj, dom);
 
         appendRoot(dom, root, force);
 
@@ -2843,8 +2849,9 @@ var Rosetta = {
 
     ready: ready,
 
-    triggerChildren: triggerChildren
+    triggerChildren: triggerChildren,
 
+    updateRefs: updateRefs
 };
 
 module.exports = Rosetta;

@@ -54,6 +54,8 @@ function update(options) {
     this.vTree = newTree;
     this.attrs = attr;
 
+    Rosetta.updateRefs(this, this.root);
+
     Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
     this.trigger(ATTRIBUTECHANGE, this);
 }
