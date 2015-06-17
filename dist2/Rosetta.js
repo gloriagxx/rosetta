@@ -46,10 +46,6 @@ var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
     isString = utils.isString;
 
-
-var Delegator = require('./dom-delegator');
-
-
 function on(type, listener, context, ifOnce) {
     bind.call(this, type, listener, context, ifOnce);
 }
@@ -165,7 +161,7 @@ function createElementClass(type, renderFunc) {
 }
 
 module.exports = createElementClass;
-},{"./dom-delegator":5,"./lifeEvents.js":19,"./supportEvent.js":22,"./utils.js":23,"./virtual-dom/create-element":24,"./virtual-dom/diff":25,"./virtual-dom/h":26,"./virtual-dom/patch":34}],3:[function(require,module,exports){
+},{"./lifeEvents.js":19,"./supportEvent.js":22,"./utils.js":23,"./virtual-dom/create-element":24,"./virtual-dom/diff":25,"./virtual-dom/h":26,"./virtual-dom/patch":34}],3:[function(require,module,exports){
 var EvStore = require("ev-store")
 
 module.exports = addEvent
