@@ -40,3 +40,9 @@ Chrome Version 41.0.2272.101 (64-bit) OSX 10.10.3 of Macbook Pro
 
 [runner]: http://jiexuangao.github.io/todomvc-perf-comparison/
 
+
+#Roadmap
+* v1.0.0
+* v1.0.1
+
+
