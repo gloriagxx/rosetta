@@ -2,7 +2,7 @@ ui: tape
 concurrency: 1
 browsers:
   - name: iphone
-    version: 4.3..latest
+    version: 5.0..latest
 
   - name: android
     version: 4.0..latest
