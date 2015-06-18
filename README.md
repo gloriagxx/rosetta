@@ -26,8 +26,11 @@
 
 --------------------------------------------------------------------------
 
-# Learn by case
-[cases](https://github.com/jiexuangao/rosetta/wiki/learn-by-case)
+# Learn by Cases
+* demos
+    * [Rosetta simple todo](https://github.com/jiexuangao/todomvc-perf-comparison/tree/master/todomvc/rosetta)
+    * [Rosetta dynamic usage](https://github.com/jiexuangao/runtimedemo)
+* [cases](https://github.com/jiexuangao/rosetta/wiki/learn-by-case)
 
 --------------------------------------------------------------------------
 
