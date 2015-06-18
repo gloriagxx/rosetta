@@ -17,7 +17,7 @@ browsers:
     version: 5..latest
 
   - name: ipad
-    version: 4.3..latest
+    version: 5.0..latest
 
   - name: internet explorer
     version: 9..latest
