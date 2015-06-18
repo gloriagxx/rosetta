@@ -1247,6 +1247,8 @@ function create(type, attr) {
         return;
     }
 
+    attr = attr || {};
+
     var childrenContent = [].slice.call(arguments, 2);
 
     childrenContent = toPlainArray(childrenContent);
