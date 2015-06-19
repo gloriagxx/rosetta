@@ -22,12 +22,121 @@ window.Rosetta = Rosetta;
 
 ready(Rosetta.init);
 
-},{"./lib/rosetta.js":4,"./lib/shims.js":5}],2:[function(require,module,exports){
+},{"./lib/rosetta.js":5,"./lib/shims.js":6}],2:[function(require,module,exports){
+var utils = require('./utils.js'),
+    bind = utils.bind,
+    fire = utils.fire,
+    isDomNode = utils.isDomNode,
+
+    lifeEvents = require('./lifeEvents.js'),
+    ATTACHED = lifeEvents.ATTACHED,
+    DETACHED = lifeEvents.DETACHED,
+    CREATED = lifeEvents.CREATED
+    ATTRIBUTECHANGE = lifeEvents.ATTRIBUTECHANGE;
+
+
+function createElemClass(type, renderFunc) {
+    function update(options) {
+        // extend(this.attrs, options, true);
+        var children = this.children,
+            root = this.root,
+            type = this.type;
+
+        extend(this.attrs, options, true);
+        this.root = Rosetta.render(this, root, true);
+        this.trigger(ATTRIBUTECHANGE, this);
+    }
+
+    function destroy() {
+        this.off();
+        this.root.parentElement.removeChild(this.root);
+        this.trigger(DETACHED, this);
+        delete ref(this.name);
+    }
+
+    function on(type, listener, context, ifOnce) {
+        bind.call(this, type, listener, context, ifOnce);
+    }
+
+    function trigger(type) {
+        fire.call(this, type);
+    }
+
+    function off(type) {
+        if (!type) {
+            this.events = [];
+        }
+
+        delete this.events[type];
+    }
+
+    function once(type, listener, context) {
+        this.on(type, listener, context, true);
+    }
+
+
+    function create(type, attr) {
+        var obj = Rosetta.create.apply(Rosetta, arguments);
+        if (!!attr && !!attr.ref) {
+            if (obj.isRosettaElem == true) {
+                this.refs[attr.ref] = obj.root;
+            } else if (isDomNode(obj)) {
+                this.refs[attr.ref] = obj;
+            }
+        }
+
+        return obj;
+    }
+    return (function(type, renderFunc) {
+        function CustomElement(options) {
+            extend(this, {
+                type: type,
+
+                name: name,
+
+                renderFunc: renderFunc,
+
+                refs: {},
+
+                events: {},
+
+                isAttached: false,
+
+                attrs: {}
+            }, options || {}, true);
+        }
+
+        CustomElement.prototype = {
+            update: update,
+
+            destroy: destroy,
+
+            isRosettaElem: true,
+
+            on: on,
+
+            trigger: trigger,
+
+            off: off,
+
+            once: once,
+
+            create: create
+
+        };
+
+        return CustomElement;
+
+    })(type, renderFunc);
+}
+
+module.exports = createElemClass;
+},{"./lifeEvents.js":3,"./utils.js":8}],3:[function(require,module,exports){
 module.exports.ATTACHED = 'attached';
 module.exports.DETACHED = 'detached';
 module.exports.CREATED = 'created';
 module.exports.ATTRIBUTECHANGE = 'attributeChange';
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 var plainDom = {
     content: 'content',
     a: 'a',
@@ -166,7 +275,7 @@ var plainDom = {
 };
 
 module.exports = plainDom;
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /*@require ./rosetta.css*/
 var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
@@ -182,7 +291,7 @@ var supportEvent = require('./supportEvent.js'),
     bind = utils.bind,
     fire = utils.fire,
 
-    refers = {},
+    _refers = {},
     _elemClass = {},
     allRendered = false,
 
@@ -191,6 +300,29 @@ var supportEvent = require('./supportEvent.js'),
     DETACHED = lifeEvents.DETACHED,
     CREATED = lifeEvents.CREATED
     ATTRIBUTECHANGE = lifeEvents.ATTRIBUTECHANGE;
+
+var createElemClass = require('./createElementClass.js');
+
+function attributeToAttrs(name, value) {
+  // try to match this attribute to a property (attributes are
+  // all lower-case, so this is case-insensitive search)
+    if (name) {
+        // filter out 'mustached' values, these are to be
+        // get original value
+        var currentValue = this.attrs[name];
+        if (typeof currentValue != typeof value) {
+            // deserialize Boolean or Number values from attribute
+            value = deserializeValue(value, currentValue);
+        }
+
+        // only act if the value has changed
+        if (value !== currentValue) {
+            // install new value (has side-effects)
+            this.attrs[name] = value;
+        }
+  }
+
+}
 
 function updateDom(obj) {
     if (obj.isRosettaElem == true) {
@@ -205,11 +337,10 @@ function updateDom(obj) {
         var item = obj.attrs[i];
         if (!supportEvent[i]) {
             if (!!item) {
-                if (!isString(item)) {
-                    item = objToString(item);
+                if (isString(item)) {
+                    obj.root.setAttribute(i, item || '');
                 }
             }
-            obj.root.setAttribute(i, item || '');
         } else {
             delegate(document.body, obj.root, i, item);
         }
@@ -298,110 +429,6 @@ function replaceContent(obj) {
 }
 
 
-function createElemClass(type, renderFunc) {
-    function update(options) {
-        // extend(this.attrs, options, true);
-        var children = this.children,
-            attrs = this.root.attributes,
-            root = this.root,
-            type = this.type,
-            attr = {};
-
-        for (var n = 0; n < attrs.length; n++) {
-            var item = attrs[n];
-            attr[item.name] = item.nodeValue;
-        }
-
-        attr = toType(attr || '') || {};
-        extend(this.attrs, attr, options, true);
-        this.root = Rosetta.render(this, root, true);
-
-        this.trigger(ATTRIBUTECHANGE, this);
-    }
-
-    function destroy() {
-        this.off();
-        this.root.parentElement.removeChild(this.root);
-        this.trigger(DETACHED, this);
-        delete ref(this.name);
-    }
-
-    function on(type, listener, context, ifOnce) {
-        bind.call(this, type, listener, context, ifOnce);
-    }
-
-    function trigger(type) {
-        fire.call(this, type);
-    }
-
-    function off(type) {
-        if (!type) {
-            this.events = [];
-        }
-
-        delete this.events[type];
-    }
-
-    function once(type, listener, context) {
-        this.on(type, listener, context, true);
-    }
-
-
-    function create(type, attr) {
-        var obj = Rosetta.create.apply(Rosetta, arguments);
-        if (!!attr && !!attr.ref) {
-            if (obj.isRosettaElem == true) {
-                this.refs[attr.ref] = obj.root;
-            } else if (isDomNode(obj)) {
-                this.refs[attr.ref] = obj;
-            }
-        }
-
-        return obj;
-    }
-    return (function(type, renderFunc) {
-        function CustomElement(options) {
-            extend(this, {
-                type: type,
-
-                name: name,
-
-                renderFunc: renderFunc,
-
-                refs: {},
-
-                events: {},
-
-                isAttached: false,
-
-                attrs: {}
-            }, options || {}, true);
-        }
-
-        CustomElement.prototype = {
-            update: update,
-
-            destroy: destroy,
-
-            isRosettaElem: true,
-
-            on: on,
-
-            trigger: trigger,
-
-            off: off,
-
-            once: once,
-
-            create: create
-
-        };
-
-        return CustomElement;
-
-    })(type, renderFunc);
-}
-
 function init() {
     var elems = [];
     allRendered = false;
@@ -443,9 +470,9 @@ function init() {
 
 function ref(key, value) {
     if (value) {
-        refers[key] = value;
+        _refers[key] = value;
     } else {
-        return refers[key];
+        return _refers[key];
     }
 }
 
@@ -484,17 +511,41 @@ function render(obj, root, force) {
     }
 }
 
+function getRealAttr(attr, toRealType) {
+    var eventObj = {};
+
+    for (var i in attr) {
+        var item = attr[i];
+
+        if (toRealType === true) {
+            attributeToAttrs.call(this, i, item);
+        }
+
+        if (supportEvent[i]) {
+            eventObj['ev-' + supportEvent[i]] = item;
+        }
+    }
+
+    attr = attr || {};
+
+    return {
+        eventObj: eventObj,
+        attr: attr
+    }
+}
+
 // create的trigger之前执行renderfunc
 function create(type, attr) {
     var children = [].slice.call(arguments, 2),
         children = toPlainArray(children),
         result = null;
 
-    attr = toType(attr || '') || {};
+    attr = attr || {};
 
     if (isString(type)) {
         if (isOriginalTag(type)) {
             var node = document.createElement(type);
+            attr = getRealAttr(attr).attr;
             node.attrs = attr;
 
             result = node;
@@ -522,7 +573,8 @@ function create(type, attr) {
         if (isString(type) && !isOriginalTag(type)) {
             result.renderFunc(result);
             result.name = attr.ref ? attr.ref : '';
-            extend(result.attrs, attr, true);
+            getRealAttr.call(result, attr, true);
+            result.attrs = result.attrs || attr;
 
             if (!!attr.ref) {
                 ref(attr.ref, result);
@@ -577,7 +629,7 @@ module.exports = Rosetta;
 
 
 
-},{"./lifeEvents.js":2,"./supportEvent.js":6,"./utils.js":7}],5:[function(require,module,exports){
+},{"./createElementClass.js":2,"./lifeEvents.js":3,"./supportEvent.js":7,"./utils.js":8}],6:[function(require,module,exports){
 /*!
  * https://github.com/es-shims/es5-shim
  * @license es5-shim Copyright 2009-2015 by contributors, MIT License
@@ -1271,7 +1323,7 @@ if (!replaceReportsGroupsCorrectly) {
     }
 }());
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 var supportEvent = {
     // 只支持原生的
     onClick: 'click',
@@ -1323,7 +1375,11 @@ var supportEvent = {
 };
 
 module.exports = supportEvent;
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
+function noopHandler(value) {
+    return value;
+}
+
 var plainDom = require('./plainDom.js'),
 
     isString = module.exports.isString = function(elem) {
@@ -1441,55 +1497,7 @@ var plainDom = require('./plainDom.js'),
             );
     },
 
-    toType = module.exports.toType = function(attr) {
-        var value = null;
 
-        try {
-            value = eval(attr);
-
-            // fix ie bugs
-            if (!!attr && value == undefined) {
-                value = attr;
-                return value;
-            }
-
-            if (isArray(value)) {
-                value.map(function(item, index) {
-                    value[index] = toType(item);
-                });
-            } else {
-                for (var i in value) {
-                    var v = value[i];
-                    value[i] = toType(v);
-                }
-            }
-        } catch (e) {
-            try {
-                value = JSON.parse(attr);
-            } catch (e) {
-                value = attr;
-            }
-        }
-
-        return value;
-    },
-
-    objToString = module.exports.objToString = function(obj, indeep) {
-        switch (typeof obj) {
-            case "string":
-                return "'" + obj + "'";
-            case "function":
-                return obj.name || obj.toString();
-            case "object":
-                var indent = Array(indeep || 1).join('\t'),
-                    isArray = Array.isArray(obj);
-                return ('{[' [+isArray] + Object.keys(obj).map(function(key) {
-                    return '\n\t' + indent + (isArray ? '' : key + ': ') + objToString(obj[key], (indeep || 1) + 1);
-                }).join(',') + '\n' + indent + '}]' [+isArray]).replace(/[\s\t\n]+(?=(?:[^\'"]*[\'"][^\'"]*[\'"])*[^\'"]*$)/g, '');
-            default:
-                return obj.toString();
-        }
-    },
     bind = module.exports.bind = function(type, listener, context, ifOnce) {
         this.events = this.events || {};
         var queue = this.events[type] || (this.events[type] = []);
@@ -1522,6 +1530,66 @@ var plainDom = require('./plainDom.js'),
                 j--;
             }
         }
+    },
+
+    deserializeValue = module.exports.deserializeValue = function(value, currentValue) {
+        // attempt to infer type from default value
+        var inferredType = typeof currentValue;
+        // invent 'date' type value for Date
+        if (currentValue instanceof Date) {
+            inferredType = 'date';
+        }
+        // delegate deserialization via type string
+        return typeHandlers[inferredType](value, currentValue);
+    },
+
+    // helper for deserializing properties of various types to strings
+    typeHandlers = module.exports.typeHandlers = {
+        string: noopHandler,
+        'undefined': noopHandler,
+
+        date: function(value) {
+            return new Date(Date.parse(value) || Date.now());
+        },
+
+        boolean: function(value) {
+            if (value === '') {
+                return true;
+            }
+            return value === 'false' ? false : !!value;
+        },
+
+        number: function(value) {
+            var n = parseFloat(value);
+            // hex values like "0xFFFF" parseFloat as 0
+            if (n === 0) {
+                n = parseInt(value);
+            }
+            return isNaN(n) ? value : n;
+            // this code disabled because encoded values (like "0xFFFF")
+            // do not round trip to their original format
+            //return (String(floatVal) === value) ? floatVal : value;
+        },
+
+        object: function(value, currentValue) {
+            if (currentValue === null) {
+                return value;
+            }
+            try {
+                // If the string is an object, we can parse is with the JSON library.
+                // include convenience replace for single-quotes. If the author omits
+                // quotes altogether, parse will fail.
+                return JSON.parse(value.replace(/'/g, '"'));
+            } catch (e) {
+                // The object isn't valid JSON, return the raw value
+                return value;
+            }
+        },
+
+        // avoid deserialization of functions
+        'function': function(value, currentValue) {
+            return currentValue;
+        }
     };
 
-},{"./plainDom.js":3}]},{},[1]);
+},{"./plainDom.js":4}]},{},[1]);
