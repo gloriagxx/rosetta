@@ -277,6 +277,7 @@ var plainDom = {
 module.exports = plainDom;
 },{}],5:[function(require,module,exports){
 /*@require ./rosetta.css*/
+/**Rosetta v1.0,0**/
 var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
     query = utils.query,
