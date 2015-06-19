@@ -394,7 +394,7 @@ function replaceContent(obj) {
 
     for (var i = 0; i < contents.length; i++) {
         var item = contents[i];
-        obj.holder[item.getAttribute('selector')] = item;
+        obj.holder[item.getAttribute('select')] = item;
     }
 
     // deal with content
@@ -412,7 +412,7 @@ function replaceContent(obj) {
             if (newDom.length > 0) {
                 var container = document.createElement('div');
                 container.setAttribute('class', 'content');
-                container.setAttribute('selector', i);
+                container.setAttribute('select', i);
                 dom.parentElement.replaceChild(container, dom);
                 for (var j = 0; j < newDom.length; j++) {
                     container.appendChild(newDom[j]);
