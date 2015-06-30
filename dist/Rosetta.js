@@ -1202,14 +1202,13 @@ function render(vTree, root, force) {
             var selector = content.getAttribute('select');
             var result = query(selector, tmp);
 
-
-            (children || []).map(function(child, i) {
-                if (result.indexOf(child) >= 0) {
-                    (function(item) {
-                        newWrapper.appendChild(item);
-                    })(child);
+            (children || []).map(function(child, i, arr) {
+                var index = result.indexOf(child);
+                if (index >= 0) {
+                    newWrapper.appendChild(arr.splice(i, 1)[0]);
                 }
             });
+
 
             if (newWrapper.children.length <= 0) {
                 newWrapper.parentElement.removeChild(newWrapper);
