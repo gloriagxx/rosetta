@@ -1205,7 +1205,9 @@ function render(vTree, root, force) {
 
             (children || []).map(function(child, i) {
                 if (result.indexOf(child) >= 0) {
-                    newWrapper.appendChild(child);
+                    (function(item) {
+                        newWrapper.appendChild(item);
+                    })(child);
                 }
             });
 
