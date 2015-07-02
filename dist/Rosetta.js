@@ -2182,7 +2182,7 @@ extend = module.exports.extend = function(target) {
             var item = data[i];
 
             if (isArray(item)) {
-                result = result.concat(item);
+                result = result.concat(toPlainArray(item));
             } else {
                 result.push(item);
             }
