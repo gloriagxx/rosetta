@@ -1,6 +1,6 @@
 {
     "name": "rosetta",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "A Webcomponent-like javascript framework",
     "keywords": [
         "rosetta",
@@ -22,9 +22,6 @@
     "repository": "git@github.com:jiexuangao/rosetta.git",
     "scripts": {
         "dist": "browserify index.js > ./dist/Rosetta.js",
-
-        "dist2": "browserify index2.js > ./dist2/Rosetta.js",
-
 
         "test": "zuul -- test/unit/*.js",
         "cover": "istanbul cover --report html --print detail ./test/unit/utils_test.js",

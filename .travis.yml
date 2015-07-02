@@ -11,7 +11,7 @@ before_install:
 before_script:
 - npm install
 # - npm install istanbul coveralls
-script: npm run test
+script: npm run-script test
 
 env:
   global:
