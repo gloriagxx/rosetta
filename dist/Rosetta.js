@@ -22,7 +22,13 @@ window.Rosetta = Rosetta;
 
 ready(Rosetta.init);
 
-},{"./lib/rosetta.js":5,"./lib/shims.js":6}],2:[function(require,module,exports){
+},{"./lib/rosetta.js":19,"./lib/shims.js":20}],2:[function(require,module,exports){
+var h = require('./virtual-dom/h'),
+    diff = require('./virtual-dom/diff'),
+    patch = require('./virtual-dom/patch'),
+    createElement = require('./virtual-dom/create-element');
+
+
 var utils = require('./utils.js'),
     bind = utils.bind,
     fire = utils.fire,
@@ -35,108 +41,802 @@ var utils = require('./utils.js'),
     ATTRIBUTECHANGE = lifeEvents.ATTRIBUTECHANGE;
 
 
-function createElemClass(type, renderFunc) {
-    function update(options) {
-        // extend(this.attrs, options, true);
-        var children = this.children,
-            root = this.root,
-            type = this.type;
+var supportEvent = require('./supportEvent.js'),
+    utils = require('./utils.js'),
+    isString = utils.isString;
 
-        extend(this.attrs, options, true);
-        this.root = Rosetta.render(this, root, true);
-        this.trigger(ATTRIBUTECHANGE, this);
-    }
-
-    function destroy() {
-        this.off();
-        this.root.parentElement.removeChild(this.root);
-        this.trigger(DETACHED, this);
-        delete ref(this.name);
-    }
-
-    function on(type, listener, context, ifOnce) {
-        bind.call(this, type, listener, context, ifOnce);
-    }
-
-    function trigger(type) {
-        fire.call(this, type);
-    }
-
-    function off(type) {
-        if (!type) {
-            this.events = [];
-        }
-
-        delete this.events[type];
-    }
-
-    function once(type, listener, context) {
-        this.on(type, listener, context, true);
-    }
-
-
-    function create(type, attr) {
-        var obj = Rosetta.create.apply(Rosetta, arguments);
-        if (!!attr && !!attr.ref) {
-            if (obj.isRosettaElem == true) {
-                this.refs[attr.ref] = obj.root;
-            } else if (isDomNode(obj)) {
-                this.refs[attr.ref] = obj;
-            }
-        }
-
-        return obj;
-    }
-    return (function(type, renderFunc) {
-        function CustomElement(options) {
-            extend(this, {
-                type: type,
-
-                name: name,
-
-                renderFunc: renderFunc,
-
-                refs: {},
-
-                events: {},
-
-                isAttached: false,
-
-                attrs: {}
-            }, options || {}, true);
-        }
-
-        CustomElement.prototype = {
-            update: update,
-
-            destroy: destroy,
-
-            isRosettaElem: true,
-
-            on: on,
-
-            trigger: trigger,
-
-            off: off,
-
-            once: once,
-
-            create: create
-
-        };
-
-        return CustomElement;
-
-    })(type, renderFunc);
+function on(type, listener, context, ifOnce) {
+    bind.call(this, type, listener, context, ifOnce);
 }
 
-module.exports = createElemClass;
-},{"./lifeEvents.js":3,"./utils.js":8}],3:[function(require,module,exports){
+function trigger(type) {
+    fire.call(this, type);
+}
+
+function off(type) {
+    if (!type) {
+        this.events = [];
+    }
+
+    delete this.events[type];
+}
+
+function once(type, listener, context) {
+    this.on(type, listener, context, true);
+}
+
+
+function update(options) {
+    var oldTree = this.vTree,
+        root = this.root,
+        type = this.type,
+        attr = {};
+
+    attr = extend(this.attrs, options, true);
+    var newTree = this.__t(this, attr, this.refs);
+    var patches = diff(oldTree, newTree);
+    this.root = patch(this.root, patches);
+    this.vTree = newTree;
+    this.attrs = attr;
+
+    Rosetta.updateRefs(this, this.root);
+
+    Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
+    this.trigger(ATTRIBUTECHANGE, this);
+}
+
+function destroy() {
+    this.off();
+    this.root.parentElement.removeChild(this.root);
+    Rosetta.triggerChildren(this, DETACHED);
+    this.trigger(DETACHED, this);
+    delete ref(this.name);
+}
+
+function create(type, attr) {
+    var obj = Rosetta.create.apply(Rosetta, arguments);
+    // to update refs, something wrong here
+
+    if (!!attr && !!attr.ref) {
+        this.refs[attr.ref] = obj;
+    }
+
+    if (obj.realObj && obj.realObj.isRosettaElem == true) {
+        this.rosettaElems = this.rosettaElems || [];
+        this.rosettaElems.push(obj.realObj);
+    }
+
+    return obj;
+}
+
+
+
+function createElementClass(type, renderFunc) {
+    /**
+     * constructor for new custom elements
+     *
+     * @class CustomElement
+     * @constructor
+     */
+
+    function CustomElement(options) {
+        extend(this, {
+            type: type,
+
+            name: name,
+
+            renderFunc: renderFunc,
+
+            refs: {},
+
+            events: {},
+
+            isAttached: false,
+
+            attrs: {}
+        }, options || {}, true);
+    }
+
+    CustomElement.prototype = {
+        update: update,
+
+        destroy: destroy,
+
+        isRosettaElem: true,
+
+        on: on,
+
+        trigger: trigger,
+
+        off: off,
+
+        once: once,
+
+        create: create,
+
+        __t: function(){}
+
+    };
+
+    return CustomElement;
+}
+
+module.exports = createElementClass;
+},{"./lifeEvents.js":17,"./supportEvent.js":21,"./utils.js":22,"./virtual-dom/create-element":23,"./virtual-dom/diff":24,"./virtual-dom/h":25,"./virtual-dom/patch":33}],3:[function(require,module,exports){
+var EvStore = require("ev-store")
+
+module.exports = addEvent
+
+function addEvent(target, type, handler) {
+    var events = EvStore(target)
+    var event = events[type]
+
+    if (!event) {
+        events[type] = handler
+    } else if (Array.isArray(event)) {
+        if (event.indexOf(handler) === -1) {
+            event.push(handler)
+        }
+    } else if (event !== handler) {
+        events[type] = [event, handler]
+    }
+}
+
+},{"ev-store":7}],4:[function(require,module,exports){
+var globalDocument = require("global/document")
+var EvStore = require("ev-store")
+var createStore = require("weakmap-shim/create-store")
+
+var addEvent = require("./add-event.js")
+var removeEvent = require("./remove-event.js")
+var ProxyEvent = require("./proxy-event.js")
+
+var HANDLER_STORE = createStore()
+
+module.exports = DOMDelegator
+
+function DOMDelegator(document) {
+    if (!(this instanceof DOMDelegator)) {
+        return new DOMDelegator(document);
+    }
+
+    document = document || globalDocument
+
+    this.target = document.documentElement
+    this.events = {}
+    this.rawEventListeners = {}
+    this.globalListeners = {}
+}
+
+DOMDelegator.prototype.addEventListener = addEvent
+DOMDelegator.prototype.removeEventListener = removeEvent
+
+DOMDelegator.allocateHandle =
+    function allocateHandle(func) {
+        var handle = new Handle()
+
+        HANDLER_STORE(handle).func = func;
+
+        return handle
+    }
+
+DOMDelegator.transformHandle =
+    function transformHandle(handle, broadcast) {
+        var func = HANDLER_STORE(handle).func
+
+        return this.allocateHandle(function (ev) {
+            broadcast(ev, func);
+        })
+    }
+
+DOMDelegator.prototype.addGlobalEventListener =
+    function addGlobalEventListener(eventName, fn) {
+        var listeners = this.globalListeners[eventName] || [];
+        if (listeners.indexOf(fn) === -1) {
+            listeners.push(fn)
+        }
+
+        this.globalListeners[eventName] = listeners;
+    }
+
+DOMDelegator.prototype.removeGlobalEventListener =
+    function removeGlobalEventListener(eventName, fn) {
+        var listeners = this.globalListeners[eventName] || [];
+
+        var index = listeners.indexOf(fn)
+        if (index !== -1) {
+            listeners.splice(index, 1)
+        }
+    }
+
+DOMDelegator.prototype.listenTo = function listenTo(eventName) {
+    if (!(eventName in this.events)) {
+        this.events[eventName] = 0;
+    }
+
+    this.events[eventName]++;
+
+    if (this.events[eventName] !== 1) {
+        return
+    }
+
+    var listener = this.rawEventListeners[eventName]
+    if (!listener) {
+        listener = this.rawEventListeners[eventName] =
+            createHandler(eventName, this)
+    }
+
+    if (this.target.addEventListener) {
+        this.target.addEventListener(eventName, listener, true)
+    } else {
+        this.target.attachEvent('on' + eventName, listener);
+    }
+
+
+}
+
+DOMDelegator.prototype.unlistenTo = function unlistenTo(eventName) {
+    if (!(eventName in this.events)) {
+        this.events[eventName] = 0;
+    }
+
+    if (this.events[eventName] === 0) {
+        throw new Error("already unlistened to event.");
+    }
+
+    this.events[eventName]--;
+
+    if (this.events[eventName] !== 0) {
+        return
+    }
+
+    var listener = this.rawEventListeners[eventName]
+
+    if (!listener) {
+        throw new Error("dom-delegator#unlistenTo: cannot " +
+            "unlisten to " + eventName)
+    }
+
+    if (this.target.removeEventListener) {
+        this.target.removeEventListener(eventName, listener, true)
+    } else {
+        this.target.dettachEvent(eventName, listener)
+    }
+
+
+}
+function createHandler(eventName, delegator) {
+    var globalListeners = delegator.globalListeners;
+    var delegatorTarget = delegator.target;
+
+    return handler
+
+    function handler(ev) {
+        var globalHandlers = globalListeners[eventName] || []
+
+        if (globalHandlers.length > 0) {
+            var globalEvent = new ProxyEvent(ev);
+            globalEvent.currentTarget = delegatorTarget;
+            callListeners(globalHandlers, globalEvent)
+        }
+
+        findAndInvokeListeners(ev.target, ev, eventName)
+    }
+}
+
+function findAndInvokeListeners(elem, ev, eventName) {
+    var listener = getListener(elem, eventName)
+
+    if (listener && listener.handlers.length > 0) {
+        var listenerEvent = new ProxyEvent(ev);
+        listenerEvent.currentTarget = listener.currentTarget
+        callListeners(listener.handlers, listenerEvent)
+
+        if (listenerEvent._bubbles) {
+            var nextTarget = listener.currentTarget.parentNode
+            findAndInvokeListeners(nextTarget, ev, eventName)
+        }
+    }
+}
+
+function getListener(target, type) {
+    // terminate recursion if parent is `null`
+    if (target === null || typeof target === "undefined") {
+        return null
+    }
+
+    var events = EvStore(target)
+    // fetch list of handler fns for this event
+    var handler = events[type]
+    var allHandler = events.event
+
+    if (!handler && !allHandler) {
+        return getListener(target.parentNode, type)
+    }
+
+    var handlers = [].concat(handler || [], allHandler || [])
+    return new Listener(target, handlers)
+}
+
+function callListeners(handlers, ev) {
+    handlers.forEach(function (handler) {
+        if (typeof handler === "function") {
+            handler(ev)
+        } else if (typeof handler.handleEvent === "function") {
+            handler.handleEvent(ev)
+        } else if (handler.type === "dom-delegator-handle") {
+            HANDLER_STORE(handler).func(ev)
+        } else {
+            throw new Error("dom-delegator: unknown handler " +
+                "found: " + JSON.stringify(handlers));
+        }
+    })
+}
+
+function Listener(target, handlers) {
+    this.currentTarget = target
+    this.handlers = handlers
+}
+
+function Handle() {
+    this.type = "dom-delegator-handle"
+}
+
+},{"./add-event.js":3,"./proxy-event.js":15,"./remove-event.js":16,"ev-store":7,"global/document":10,"weakmap-shim/create-store":13}],5:[function(require,module,exports){
+var Individual = require("individual")
+var cuid = require("cuid")
+var globalDocument = require("global/document")
+
+var DOMDelegator = require("./dom-delegator.js")
+
+var versionKey = "13"
+var cacheKey = "__DOM_DELEGATOR_CACHE@" + versionKey
+var cacheTokenKey = "__DOM_DELEGATOR_CACHE_TOKEN@" + versionKey
+var delegatorCache = Individual(cacheKey, {
+    delegators: {}
+})
+var commonEvents = [
+    "blur", "change", "click",  "contextmenu", "dblclick",
+    "error","focus", "focusin", "focusout", "input", "keydown",
+    "keypress", "keyup", "load", "mousedown", "mouseup",
+    "resize", "select", "submit", "touchcancel",
+    "touchend", "touchstart", "unload"
+]
+
+/*  Delegator is a thin wrapper around a singleton `DOMDelegator`
+        instance.
+
+    Only one DOMDelegator should exist because we do not want
+        duplicate event listeners bound to the DOM.
+
+    `Delegator` will also `listenTo()` all events unless
+        every caller opts out of it
+*/
+module.exports = Delegator
+
+function Delegator(opts) {
+    opts = opts || {}
+    var document = opts.document || globalDocument
+
+    var cacheKey = document[cacheTokenKey]
+
+    if (!cacheKey) {
+        cacheKey =
+            document[cacheTokenKey] = cuid()
+    }
+
+    var delegator = delegatorCache.delegators[cacheKey]
+
+    if (!delegator) {
+        delegator = delegatorCache.delegators[cacheKey] =
+            new DOMDelegator(document)
+    }
+
+    if (opts.defaultEvents !== false) {
+        for (var i = 0; i < commonEvents.length; i++) {
+            delegator.listenTo(commonEvents[i])
+        }
+    }
+
+    return delegator
+}
+
+Delegator.allocateHandle = DOMDelegator.allocateHandle;
+Delegator.transformHandle = DOMDelegator.transformHandle;
+
+},{"./dom-delegator.js":4,"cuid":6,"global/document":10,"individual":11}],6:[function(require,module,exports){
+/**
+ * cuid.js
+ * Collision-resistant UID generator for browsers and node.
+ * Sequential for fast db lookups and recency sorting.
+ * Safe for element IDs and server-side lookups.
+ *
+ * Extracted from CLCTR
+ * 
+ * Copyright (c) Eric Elliott 2012
+ * MIT License
+ */
+
+/*global window, navigator, document, require, process, module */
+(function (app) {
+  'use strict';
+  var namespace = 'cuid',
+    c = 0,
+    blockSize = 4,
+    base = 36,
+    discreteValues = Math.pow(base, blockSize),
+
+    pad = function pad(num, size) {
+      var s = "000000000" + num;
+      return s.substr(s.length-size);
+    },
+
+    randomBlock = function randomBlock() {
+      return pad((Math.random() *
+            discreteValues << 0)
+            .toString(base), blockSize);
+    },
+
+    safeCounter = function () {
+      c = (c < discreteValues) ? c : 0;
+      c++; // this is not subliminal
+      return c - 1;
+    },
+
+    api = function cuid() {
+      // Starting with a lowercase letter makes
+      // it HTML element ID friendly.
+      var letter = 'c', // hard-coded allows for sequential access
+
+        // timestamp
+        // warning: this exposes the exact date and time
+        // that the uid was created.
+        timestamp = (new Date().getTime()).toString(base),
+
+        // Prevent same-machine collisions.
+        counter,
+
+        // A few chars to generate distinct ids for different
+        // clients (so different computers are far less
+        // likely to generate the same id)
+        fingerprint = api.fingerprint(),
+
+        // Grab some more chars from Math.random()
+        random = randomBlock() + randomBlock();
+
+        counter = pad(safeCounter().toString(base), blockSize);
+
+      return  (letter + timestamp + counter + fingerprint + random);
+    };
+
+  api.slug = function slug() {
+    var date = new Date().getTime().toString(36),
+      counter,
+      print = api.fingerprint().slice(0,1) +
+        api.fingerprint().slice(-1),
+      random = randomBlock().slice(-2);
+
+      counter = safeCounter().toString(36).slice(-4);
+
+    return date.slice(-2) + 
+      counter + print + random;
+  };
+
+  api.globalCount = function globalCount() {
+    // We want to cache the results of this
+    var cache = (function calc() {
+        var i,
+          count = 0;
+
+        for (i in window) {
+          count++;
+        }
+
+        return count;
+      }());
+
+    api.globalCount = function () { return cache; };
+    return cache;
+  };
+
+  api.fingerprint = function browserPrint() {
+    return pad((navigator.mimeTypes.length +
+      navigator.userAgent.length).toString(36) +
+      api.globalCount().toString(36), 4);
+  };
+
+  // don't change anything from here down.
+  if (app.register) {
+    app.register(namespace, api);
+  } else if (typeof module !== 'undefined') {
+    module.exports = api;
+  } else {
+    app[namespace] = api;
+  }
+
+}(this.applitude || this));
+
+},{}],7:[function(require,module,exports){
+'use strict';
+
+var OneVersionConstraint = require('individual/one-version');
+
+var MY_VERSION = '7';
+OneVersionConstraint('ev-store', MY_VERSION);
+
+var hashKey = '__EV_STORE_KEY@' + MY_VERSION;
+
+module.exports = EvStore;
+
+function EvStore(elem) {
+    var hash = elem[hashKey];
+
+    if (!hash) {
+        hash = elem[hashKey] = {};
+    }
+
+    return hash;
+}
+
+},{"individual/one-version":9}],8:[function(require,module,exports){
+(function (global){
+'use strict';
+
+/*global window, global*/
+
+var root = typeof window !== 'undefined' ?
+    window : typeof global !== 'undefined' ?
+    global : {};
+
+module.exports = Individual;
+
+function Individual(key, value) {
+    if (key in root) {
+        return root[key];
+    }
+
+    root[key] = value;
+
+    return value;
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],9:[function(require,module,exports){
+'use strict';
+
+var Individual = require('./index.js');
+
+module.exports = OneVersion;
+
+function OneVersion(moduleName, version, defaultValue) {
+    var key = '__INDIVIDUAL_ONE_VERSION_' + moduleName;
+    var enforceKey = key + '_ENFORCE_SINGLETON';
+
+    var versionValue = Individual(enforceKey, version);
+
+    if (versionValue !== version) {
+        throw new Error('Can only have one copy of ' +
+            moduleName + '.\n' +
+            'You already have version ' + versionValue +
+            ' installed.\n' +
+            'This means you cannot install version ' + version);
+    }
+
+    return Individual(key, defaultValue);
+}
+
+},{"./index.js":8}],10:[function(require,module,exports){
+(function (global){
+var topLevel = typeof global !== 'undefined' ? global :
+    typeof window !== 'undefined' ? window : {}
+var minDoc = require('min-document');
+
+if (typeof document !== 'undefined') {
+    module.exports = document;
+} else {
+    var doccy = topLevel['__GLOBAL_DOCUMENT_CACHE@4'];
+
+    if (!doccy) {
+        doccy = topLevel['__GLOBAL_DOCUMENT_CACHE@4'] = minDoc;
+    }
+
+    module.exports = doccy;
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"min-document":56}],11:[function(require,module,exports){
+(function (global){
+var root = typeof window !== 'undefined' ?
+    window : typeof global !== 'undefined' ?
+    global : {};
+
+module.exports = Individual
+
+function Individual(key, value) {
+    if (root[key]) {
+        return root[key]
+    }
+
+    Object.defineProperty(root, key, {
+        value: value
+        , configurable: true
+    })
+
+    return value
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],12:[function(require,module,exports){
+if (typeof Object.create === 'function') {
+  // implementation from standard node.js 'util' module
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor
+    ctor.prototype = Object.create(superCtor.prototype, {
+      constructor: {
+        value: ctor,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+  };
+} else {
+  // old school shim for old browsers
+  module.exports = function inherits(ctor, superCtor) {
+    ctor.super_ = superCtor
+    var TempCtor = function () {}
+    TempCtor.prototype = superCtor.prototype
+    ctor.prototype = new TempCtor()
+    ctor.prototype.constructor = ctor
+  }
+}
+
+},{}],13:[function(require,module,exports){
+var hiddenStore = require('./hidden-store.js');
+
+module.exports = createStore;
+
+function createStore() {
+    var key = {};
+
+    return function (obj) {
+        if ((typeof obj !== 'object' || obj === null) &&
+            typeof obj !== 'function'
+        ) {
+            throw new Error('Weakmap-shim: Key must be object')
+        }
+
+        var store = obj.valueOf(key);
+        return store && store.identity === key ?
+            store : hiddenStore(obj, key);
+    };
+}
+
+},{"./hidden-store.js":14}],14:[function(require,module,exports){
+module.exports = hiddenStore;
+
+function hiddenStore(obj, key) {
+    var store = { identity: key };
+    var valueOf = obj.valueOf;
+
+    Object.defineProperty(obj, "valueOf", {
+        value: function (value) {
+            return value !== key ?
+                valueOf.apply(this, arguments) : store;
+        },
+        writable: true
+    });
+
+    return store;
+}
+
+},{}],15:[function(require,module,exports){
+var inherits = require("inherits")
+
+var ALL_PROPS = [
+    "altKey", "bubbles", "cancelable", "ctrlKey",
+    "eventPhase", "metaKey", "relatedTarget", "shiftKey",
+    "target", "timeStamp", "type", "view", "which"
+]
+var KEY_PROPS = ["char", "charCode", "key", "keyCode"]
+var MOUSE_PROPS = [
+    "button", "buttons", "clientX", "clientY", "layerX",
+    "layerY", "offsetX", "offsetY", "pageX", "pageY",
+    "screenX", "screenY", "toElement"
+]
+
+var rkeyEvent = /^key|input/
+var rmouseEvent = /^(?:mouse|pointer|contextmenu)|click/
+
+module.exports = ProxyEvent
+
+function ProxyEvent(ev) {
+    if (!(this instanceof ProxyEvent)) {
+        return new ProxyEvent(ev)
+    }
+
+    if (rkeyEvent.test(ev.type)) {
+        return new KeyEvent(ev)
+    } else if (rmouseEvent.test(ev.type)) {
+        return new MouseEvent(ev)
+    }
+
+    for (var i = 0; i < ALL_PROPS.length; i++) {
+        var propKey = ALL_PROPS[i]
+        this[propKey] = ev[propKey]
+    }
+
+    this._rawEvent = ev
+    this._bubbles = false;
+}
+
+ProxyEvent.prototype.preventDefault = function () {
+    this._rawEvent.preventDefault()
+}
+
+ProxyEvent.prototype.startPropagation = function () {
+    this._bubbles = true;
+}
+
+function MouseEvent(ev) {
+    for (var i = 0; i < ALL_PROPS.length; i++) {
+        var propKey = ALL_PROPS[i]
+        this[propKey] = ev[propKey]
+    }
+
+    for (var j = 0; j < MOUSE_PROPS.length; j++) {
+        var mousePropKey = MOUSE_PROPS[j]
+        this[mousePropKey] = ev[mousePropKey]
+    }
+
+    this._rawEvent = ev
+}
+
+inherits(MouseEvent, ProxyEvent)
+
+function KeyEvent(ev) {
+    for (var i = 0; i < ALL_PROPS.length; i++) {
+        var propKey = ALL_PROPS[i]
+        this[propKey] = ev[propKey]
+    }
+
+    for (var j = 0; j < KEY_PROPS.length; j++) {
+        var keyPropKey = KEY_PROPS[j]
+        this[keyPropKey] = ev[keyPropKey]
+    }
+
+    this._rawEvent = ev
+}
+
+inherits(KeyEvent, ProxyEvent)
+
+},{"inherits":12}],16:[function(require,module,exports){
+var EvStore = require("ev-store")
+
+module.exports = removeEvent
+
+function removeEvent(target, type, handler) {
+    var events = EvStore(target)
+    var event = events[type]
+
+    if (!event) {
+        return
+    } else if (Array.isArray(event)) {
+        var index = event.indexOf(handler)
+        if (index !== -1) {
+            event.splice(index, 1)
+        }
+    } else if (event === handler) {
+        events[type] = null
+    }
+}
+
+},{"ev-store":7}],17:[function(require,module,exports){
 module.exports.ATTACHED = 'attached';
 module.exports.DETACHED = 'detached';
 module.exports.CREATED = 'created';
 module.exports.ATTRIBUTECHANGE = 'attributeChange';
-},{}],4:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 var plainDom = {
     content: 'content',
     a: 'a',
@@ -275,14 +975,19 @@ var plainDom = {
 };
 
 module.exports = plainDom;
-},{}],5:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 /*@require ./rosetta.css*/
-/**Rosetta v1.0,0**/
+/** Rosetta v1.0.1**/
+
+var _refers = {},
+    _elemClass = {},
+    _allRendered = false;
+
 var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
+    isArray = utils.isArray,
     query = utils.query,
     toType = utils.toType,
-    objToString = utils.objToString,
     extend = utils.extend,
     toPlainArray = utils.toPlainArray,
     isOriginalTag = utils.isOriginalTag,
@@ -291,10 +996,8 @@ var supportEvent = require('./supportEvent.js'),
     isFunction = utils.isFunction,
     bind = utils.bind,
     fire = utils.fire,
-
-    _refers = {},
-    _elemClass = {},
-    allRendered = false,
+    deserializeValue = utils.deserializeValue,
+    typeHandlers = utils.typeHandlers,
 
     lifeEvents = require('./lifeEvents.js'),
     ATTACHED = lifeEvents.ATTACHED,
@@ -302,7 +1005,13 @@ var supportEvent = require('./supportEvent.js'),
     CREATED = lifeEvents.CREATED
     ATTRIBUTECHANGE = lifeEvents.ATTRIBUTECHANGE;
 
-var createElemClass = require('./createElementClass.js');
+var _shouldReplacedContent = [];
+
+var h = require('./virtual-dom/h'),
+    createElement = require('./virtual-dom/create-element');
+
+var Delegator = require('./dom-delegator');
+var createElementClass = require('./createElementClass.js');
 
 function attributeToAttrs(name, value) {
   // try to match this attribute to a property (attributes are
@@ -325,114 +1034,20 @@ function attributeToAttrs(name, value) {
 
 }
 
-function updateDom(obj) {
-    if (obj.isRosettaElem == true) {
-        // content的判断
 
-        obj.root = obj.__t(obj, obj.attrs, obj.ref);
-
-        replaceContent(obj);
-    }
-
-    for (var i in obj.attrs) {
-        var item = obj.attrs[i];
-        if (!supportEvent[i]) {
-            if (!!item) {
-                if (isString(item)) {
-                    obj.root.setAttribute(i, item || '');
-                }
-            }
-        } else {
-            delegate(document.body, obj.root, i, item);
-        }
-    }
-
-    return obj;
-}
-
-function appendRoot(obj, root, force) {
-    if ((isDomNode(root) && root.getAttribute('type') == 'r-element') || force == true) {
-        root.parentElement.replaceChild(obj.root, root);
-    } else {
-        if (root.isRosettaElem == true) {
-            root.children = root.children || [];
-            root.children.push(obj);
-        } else {
-            if (obj.root) {
-                root.appendChild(obj.root);
-            } else {
-                root.innerHTML += obj;
-            }
-
-        }
-    }
-    return obj;
-}
-
-function delegate(parent, child, type, cb) {
-    var callback = function(event) {
-        obj = event.srcElement ? event.srcElement : event.target;
-        while(!!obj && obj != parent.parentElement) {
-            if (obj == child) {
-                cb(event);
-                break;
-            }
-            obj = obj.parentElement;
-        }
-    };
-
-    if (parent.addEventListener) {
-        parent.addEventListener(supportEvent[type], callback, false);
-    } else {
-        parent.attachEvent('on' + supportEvent[type], callback);
+function updateRefs(obj, dom) {
+    for (var key in obj.refs) {
+        var node = query('[ref="' + key + '"]', dom);
+        obj.refs[key] = node;
     }
 }
-
-function replaceContent(obj) {
-    obj.holder = {};
-    var contents = query('content', obj.root);
-
-    for (var i = 0; i < contents.length; i++) {
-        var item = contents[i];
-        obj.holder[item.getAttribute('select')] = item;
-    }
-
-    // deal with content
-    var tmp = document.createDocumentFragment();
-    if (obj.children && obj.children.length > 0) {
-        for (var i = 0; i < obj.children.length; i++) {
-            var item = obj.children[i];
-
-            tmp.appendChild(item);
-        }
-
-        for (var i in obj.holder) {
-            var dom = obj.holder[i];
-            var newDom = query(i, tmp);
-            if (newDom.length > 0) {
-                var container = document.createElement('div');
-                container.setAttribute('class', 'content');
-                container.setAttribute('select', i);
-                dom.parentElement.replaceChild(container, dom);
-                for (var j = 0; j < newDom.length; j++) {
-                    container.appendChild(newDom[j]);
-                }
-            } else {
-                dom.parentElement.removeChild(dom);
-            }
-        }
-    } else {
-        for (var i in obj.holder) {
-            var dom = obj.holder[i];
-            dom.parentElement.removeChild(dom);
-        }
-    }
-}
-
 
 function init() {
     var elems = [];
-    allRendered = false;
+    _allRendered = false;
+
+    var delegator = Delegator();
+
     if (!!document.getElementsByClassName) {
         elems = document.getElementsByClassName('r-element');
     } else if (!!document.querySelectorAll) {
@@ -450,66 +1065,69 @@ function init() {
     for (var i = 0; i < elems.length; i++) {
         var item = elems[i],
             type = item.tagName.toLowerCase(),
-            attrs = item.attributes,
             options = {};
 
         if (type.indexOf('r-') == 0) {
+            var attrs = item.attributes || {};
+
             var children = item.children,
                 childrenArr = [].slice.call(children);
 
-            for (var n = 0; n < attrs.length; n++) {
-                var attr = attrs[n];
-                options[attr.name] = attr.nodeValue;
+            for(var n = 0; n < attrs.length; n++) {
+                var k = attrs[n];
+                options[k.name] = k.value;
             }
 
-            Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
+            var obj = Rosetta.render(Rosetta.create(type, options, childrenArr), item, true);
         }
     }
-    allRendered = true;
+
+    _allRendered = true;
+
     fire.call(Rosetta, 'ready');
 }
 
+
 function ref(key, value) {
-    if (value) {
+    if (!key) {
+        return;
+    }
+
+    if (value != undefined) {
         _refers[key] = value;
     } else {
         return _refers[key];
     }
 }
 
-function getElemClass(type) {
-    return _elemClass[type];
+function elemClass(type, newClass) {
+    if (newClass != undefined) {
+        _elemClass[type] = newClass;
+    } else {
+        return _elemClass[type];
+    }
 }
 
-function addElemClass(type, elemClass) {
-    _elemClass[type] = elemClass
+function triggerChildren(obj, type) {
+    (obj.rosettaElems || []).map(function(item, index) {
+        triggerChildren(item.rosettaElems || []);
+
+        item.trigger(type, item);
+    });
 }
 
+function appendRoot(dom, root, force) {
+    var classes = root.getAttribute('class');
 
-function render(obj, root, force) {
-    if (isString(root)) {
-        root = query(root)[0];
+    if (force == true) {
+        var v = dom.getAttribute('class');
+        dom.setAttribute('class', (v + ' ' + classes).replace(/r-invisible/g, ''));
+        root.parentElement.replaceChild(dom, root);
+    } else {
+        root.appendChild(dom);
+        root.setAttribute('class', classes.replace(/r-invisible/g, ''));
     }
 
-    if (!obj) {
-        return;
-    }
-
-    obj = updateDom(obj);
-    obj = appendRoot(obj, root, force);
-
-    if (obj.isRosettaElem == true) {
-        var type = obj.type;
-
-
-        newClass = (obj.root.getAttribute('class') || '')? (obj.root.getAttribute('class') || '') + ' ' + type : type;
-
-        obj.root.setAttribute('class', newClass.replace(/r-invisible/g, ''));
-
-        obj.isAttached = true;
-        obj.trigger(ATTACHED, obj);
-        return obj.root;
-    }
 }
 
 function getRealAttr(attr, toRealType) {
@@ -535,72 +1153,170 @@ function getRealAttr(attr, toRealType) {
     }
 }
 
-// create的trigger之前执行renderfunc
-function create(type, attr) {
-    var children = [].slice.call(arguments, 2),
-        children = toPlainArray(children),
-        result = null;
-
-    attr = attr || {};
-
-    if (isString(type)) {
-        if (isOriginalTag(type)) {
-            var node = document.createElement(type);
-            attr = getRealAttr(attr).attr;
-            node.attrs = attr;
-
-            result = node;
-
-        } else {
-            var NewClass = getElemClass(type),
-                elemObj = null;
-
-            if (!NewClass) {
-                return;
-            }
-
-            elemObj = new NewClass();
-            result = elemObj;
-        }
-
-        if (!!result) {
-            for (var i = 0; i < children.length; i++) {
-                var item = children[i];
-
-                render(item, result);
-            }
-        }
-
-        if (isString(type) && !isOriginalTag(type)) {
-            result.renderFunc(result);
-            result.name = attr.ref ? attr.ref : '';
-            getRealAttr.call(result, attr, true);
-            result.attrs = result.attrs || attr;
-
-            if (!!attr.ref) {
-                ref(attr.ref, result);
-            }
-
-            result.trigger(CREATED, result);
-        } else {
-            result.root = result;
-        }
-
-        return result;
+function getParent(dom) {
+    var parent = dom.parentElement;
+    if (!parent) {
+        return ;
     }
 
+    if (parent.getAttribute('isrosettaelem') == 'true') {
+        return parent;
+    } else {
+        return getParent(parent);
+    }
+}
+
+function render(vTree, root, force) {
+    if (isString(root)) {
+        root = query(root)[0];
+    }
+
+    var obj = vTree.realObj;
+
+    if (!vTree || !root) {
+        return;
+    }
+
+    var dom = createElement(vTree);
+
+    if (obj && obj.isRosettaElem == true) {
+        obj.root = dom;
+
+        var contents = query('content', obj.root);
+
+        (contents || []).map(function(content, index){
+            var parent = getParent(content);
+            var num = parent.getAttribute('shouldReplacedContent');
+            var children = _shouldReplacedContent[parseInt(num)];
+
+            var newWrapper = document.createElement('div');
+            newWrapper.setAttribute('class', 'content');
+            content.parentElement.replaceChild(newWrapper, content);
+
+            var tmp = document.createDocumentFragment();
+            for (var i = 0; i < children.length; i++) {
+                var n = children[i];
+
+                tmp.appendChild(n);
+            }
+            var selector = content.getAttribute('select');
+            var result = query(selector, tmp);
+
+            (children || []).map(function(child, i, arr) {
+                var index = result.indexOf(child);
+                if (index >= 0) {
+                    newWrapper.appendChild(arr.splice(i, 1)[0]);
+                }
+            });
+
+
+            if (newWrapper.children.length <= 0) {
+                newWrapper.parentElement.removeChild(newWrapper);
+            }
+        });
+
+        updateRefs(obj, dom);
+
+        appendRoot(dom, root, force);
+
+        obj.isAttached = true;
+
+        ref(obj.attrs.ref, obj);
+
+        triggerChildren(obj, ATTACHED);
+
+        obj.trigger(ATTACHED, obj);
+
+        return obj;
+    } else {
+        appendRoot(dom, root, force);
+    }
+
+    // dom and children events delegation
 }
 
 
+/**
+ * Returns vTree of newly created element instance
+ *
+ * @method create
+ * @return {Object} vTree
+ */
+
+function create(type, attr) {
+    if (!isString(type)) {
+        return;
+    }
+
+    attr = attr || {};
+
+    var childrenContent = [].slice.call(arguments, 2);
+
+    childrenContent = toPlainArray(childrenContent);
+    var vTree = '';
+
+    if (isOriginalTag(type)) {
+        var tmp = getRealAttr(attr);
+        var eventObj = tmp.eventObj;
+        attr = tmp.attr;
+
+        var newAttrs = extend({
+            attributes: attr
+        }, eventObj, true);
+
+        vTree = h.call(this, type, newAttrs, childrenContent);
+
+        return vTree;
+    } else {
+        var NewClass = elemClass(type),
+            elemObj = null;
+
+        if (!NewClass) {
+            return;
+        }
+
+        elemObj = new NewClass();
+
+        elemObj.renderFunc(elemObj);
+
+
+        elemObj.name = attr.ref ? attr.ref && ref(attr.ref, elemObj) : '';
+
+        getRealAttr.call(elemObj, attr, true);
+        elemObj.attrs = elemObj.attrs || attr;
+
+        vTree = elemObj.__t(elemObj, elemObj.attrs, elemObj.refs);
+
+        vTree.properties.attributes.isrosettaelem = true;
+        if (childrenContent) {
+            childrenContent.map(function(item, index) {
+                if (!item.nodeType) {
+                    childrenContent[index] = createElement(item);
+                }
+            });
+
+            _shouldReplacedContent.push(childrenContent);
+            vTree.properties.attributes.shouldReplacedContent = _shouldReplacedContent.length - 1;
+        }
+
+        elemObj.vTree = vTree;
+        elemObj.trigger(CREATED, elemObj);
+        vTree.realObj = elemObj;
+
+        return vTree;
+    }
+}
+
 function register(type, renderFunc) {
-    var elemClass = createElemClass(type, renderFunc);
-    addElemClass(type, elemClass);
-    return elemClass;
+    var newClass = createElementClass(type, renderFunc);
+
+    elemClass(type, newClass);
+    return newClass;
 }
 
 function ready(cb) {
     if (isFunction(cb)) {
-        if (allRendered == true) {
+        if (_allRendered == true) {
             cb();
         } else {
             bind.call(Rosetta, 'ready', cb);
@@ -608,14 +1324,13 @@ function ready(cb) {
     }
 }
 
+
 var Rosetta = {
     init: init,
 
     ref: ref,
 
-    getElemClass: getElemClass,
-
-    addElemClass: addElemClass,
+    elemClass: elemClass,
 
     render: render,
 
@@ -623,14 +1338,15 @@ var Rosetta = {
 
     register: register,
 
-    ready: ready
+    ready: ready,
+
+    triggerChildren: triggerChildren,
+
+    updateRefs: updateRefs
 };
 
 module.exports = Rosetta;
-
-
-
-},{"./createElementClass.js":2,"./lifeEvents.js":3,"./supportEvent.js":7,"./utils.js":8}],6:[function(require,module,exports){
+},{"./createElementClass.js":2,"./dom-delegator":5,"./lifeEvents.js":17,"./supportEvent.js":21,"./utils.js":22,"./virtual-dom/create-element":23,"./virtual-dom/h":25}],20:[function(require,module,exports){
 /*!
  * https://github.com/es-shims/es5-shim
  * @license es5-shim Copyright 2009-2015 by contributors, MIT License
@@ -1324,7 +2040,7 @@ if (!replaceReportsGroupsCorrectly) {
     }
 }());
 
-},{}],7:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 var supportEvent = {
     // 只支持原生的
     onClick: 'click',
@@ -1376,7 +2092,7 @@ var supportEvent = {
 };
 
 module.exports = supportEvent;
-},{}],8:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 function noopHandler(value) {
     return value;
 }
@@ -1415,7 +2131,7 @@ var plainDom = require('./plainDom.js'),
         return typeof obj == 'function' || false;
     }
 
-    extend = module.exports.extend = function(target) {
+extend = module.exports.extend = function(target) {
         var end = [].slice.call(arguments, arguments.length - 2),
             deep = false,
             params = null;
@@ -1459,13 +2175,14 @@ var plainDom = require('./plainDom.js'),
 
     toPlainArray = module.exports.toPlainArray = function(data, result) {
         if (!result) {
-            var result = [];
+            result = [];
         }
 
         for (var i = 0; i < data.length; i++) {
             var item = data[i];
+
             if (isArray(item)) {
-                toPlainArray(item, result);
+                result = result.concat(toPlainArray(item));
             } else {
                 result.push(item);
             }
@@ -1497,7 +2214,6 @@ var plainDom = require('./plainDom.js'),
                 element.querySelectorAll(selector)
             );
     },
-
 
     bind = module.exports.bind = function(type, listener, context, ifOnce) {
         this.events = this.events || {};
@@ -1593,4 +2309,1497 @@ var plainDom = require('./plainDom.js'),
         }
     };
 
-},{"./plainDom.js":4}]},{},[1]);
+},{"./plainDom.js":18}],23:[function(require,module,exports){
+var createElement = require("./vdom/create-element.js")
+
+module.exports = createElement
+
+},{"./vdom/create-element.js":35}],24:[function(require,module,exports){
+var diff = require("./vtree/diff.js")
+
+module.exports = diff
+
+},{"./vtree/diff.js":55}],25:[function(require,module,exports){
+var h = require("./virtual-hyperscript/index.js")
+
+module.exports = h
+
+},{"./virtual-hyperscript/index.js":42}],26:[function(require,module,exports){
+/*!
+ * Cross-Browser Split 1.1.1
+ * Copyright 2007-2012 Steven Levithan <stevenlevithan.com>
+ * Available under the MIT License
+ * ECMAScript compliant, uniform cross-browser split method
+ */
+
+/**
+ * Splits a string into an array of strings using a regex or string separator. Matches of the
+ * separator are not included in the result array. However, if `separator` is a regex that contains
+ * capturing groups, backreferences are spliced into the result each time `separator` is matched.
+ * Fixes browser bugs compared to the native `String.prototype.split` and can be used reliably
+ * cross-browser.
+ * @param {String} str String to split.
+ * @param {RegExp|String} separator Regex or string to use for separating the string.
+ * @param {Number} [limit] Maximum number of items to include in the result array.
+ * @returns {Array} Array of substrings.
+ * @example
+ *
+ * // Basic use
+ * split('a b c d', ' ');
+ * // -> ['a', 'b', 'c', 'd']
+ *
+ * // With limit
+ * split('a b c d', ' ', 2);
+ * // -> ['a', 'b']
+ *
+ * // Backreferences in result array
+ * split('..word1 word2..', /([a-z]+)(\d+)/i);
+ * // -> ['..', 'word', '1', ' ', 'word', '2', '..']
+ */
+module.exports = (function split(undef) {
+
+  var nativeSplit = String.prototype.split,
+    compliantExecNpcg = /()??/.exec("")[1] === undef,
+    // NPCG: nonparticipating capturing group
+    self;
+
+  self = function(str, separator, limit) {
+    // If `separator` is not a regex, use `nativeSplit`
+    if (Object.prototype.toString.call(separator) !== "[object RegExp]") {
+      return nativeSplit.call(str, separator, limit);
+    }
+    var output = [],
+      flags = (separator.ignoreCase ? "i" : "") + (separator.multiline ? "m" : "") + (separator.extended ? "x" : "") + // Proposed for ES6
+      (separator.sticky ? "y" : ""),
+      // Firefox 3+
+      lastLastIndex = 0,
+      // Make `global` and avoid `lastIndex` issues by working with a copy
+      separator = new RegExp(separator.source, flags + "g"),
+      separator2, match, lastIndex, lastLength;
+    str += ""; // Type-convert
+    if (!compliantExecNpcg) {
+      // Doesn't need flags gy, but they don't hurt
+      separator2 = new RegExp("^" + separator.source + "$(?!\\s)", flags);
+    }
+    /* Values for `limit`, per the spec:
+     * If undefined: 4294967295 // Math.pow(2, 32) - 1
+     * If 0, Infinity, or NaN: 0
+     * If positive number: limit = Math.floor(limit); if (limit > 4294967295) limit -= 4294967296;
+     * If negative number: 4294967296 - Math.floor(Math.abs(limit))
+     * If other: Type-convert, then use the above rules
+     */
+    limit = limit === undef ? -1 >>> 0 : // Math.pow(2, 32) - 1
+    limit >>> 0; // ToUint32(limit)
+    while (match = separator.exec(str)) {
+      // `separator.lastIndex` is not reliable cross-browser
+      lastIndex = match.index + match[0].length;
+      if (lastIndex > lastLastIndex) {
+        output.push(str.slice(lastLastIndex, match.index));
+        // Fix browsers whose `exec` methods don't consistently return `undefined` for
+        // nonparticipating capturing groups
+        if (!compliantExecNpcg && match.length > 1) {
+          match[0].replace(separator2, function() {
+            for (var i = 1; i < arguments.length - 2; i++) {
+              if (arguments[i] === undef) {
+                match[i] = undef;
+              }
+            }
+          });
+        }
+        if (match.length > 1 && match.index < str.length) {
+          Array.prototype.push.apply(output, match.slice(1));
+        }
+        lastLength = match[0].length;
+        lastLastIndex = lastIndex;
+        if (output.length >= limit) {
+          break;
+        }
+      }
+      if (separator.lastIndex === match.index) {
+        separator.lastIndex++; // Avoid an infinite loop
+      }
+    }
+    if (lastLastIndex === str.length) {
+      if (lastLength || !separator.test("")) {
+        output.push("");
+      }
+    } else {
+      output.push(str.slice(lastLastIndex));
+    }
+    return output.length > limit ? output.slice(0, limit) : output;
+  };
+
+  return self;
+})();
+
+},{}],27:[function(require,module,exports){
+arguments[4][7][0].apply(exports,arguments)
+},{"dup":7,"individual/one-version":29}],28:[function(require,module,exports){
+arguments[4][8][0].apply(exports,arguments)
+},{"dup":8}],29:[function(require,module,exports){
+arguments[4][9][0].apply(exports,arguments)
+},{"./index.js":28,"dup":9}],30:[function(require,module,exports){
+arguments[4][10][0].apply(exports,arguments)
+},{"dup":10,"min-document":56}],31:[function(require,module,exports){
+"use strict";
+
+module.exports = function isObject(x) {
+	return typeof x === "object" && x !== null;
+};
+
+},{}],32:[function(require,module,exports){
+var nativeIsArray = Array.isArray
+var toString = Object.prototype.toString
+
+module.exports = nativeIsArray || isArray
+
+function isArray(obj) {
+    return toString.call(obj) === "[object Array]"
+}
+
+},{}],33:[function(require,module,exports){
+var patch = require("./vdom/patch.js")
+
+module.exports = patch
+
+},{"./vdom/patch.js":38}],34:[function(require,module,exports){
+var isObject = require("is-object")
+var isHook = require("../vnode/is-vhook.js")
+
+module.exports = applyProperties
+
+function applyProperties(node, props, previous) {
+    for (var propName in props) {
+        var propValue = props[propName]
+
+        if (propValue === undefined) {
+            removeProperty(node, propName, propValue, previous);
+        } else if (isHook(propValue)) {
+            removeProperty(node, propName, propValue, previous)
+            if (propValue.hook) {
+                propValue.hook(node,
+                    propName,
+                    previous ? previous[propName] : undefined)
+            }
+        } else {
+            if (isObject(propValue)) {
+                patchObject(node, props, previous, propName, propValue);
+            } else {
+                node[propName] = propValue
+            }
+        }
+    }
+}
+
+function removeProperty(node, propName, propValue, previous) {
+    if (previous) {
+        var previousValue = previous[propName]
+
+        if (!isHook(previousValue)) {
+            if (propName === "attributes") {
+                for (var attrName in previousValue) {
+                    node.removeAttribute(attrName)
+                }
+            } else if (propName === "style") {
+                for (var i in previousValue) {
+                    node.style[i] = ""
+                }
+            } else if (typeof previousValue === "string") {
+                node[propName] = ""
+            } else {
+                node[propName] = null
+            }
+        } else if (previousValue.unhook) {
+            previousValue.unhook(node, propName, propValue)
+        }
+    }
+}
+
+function patchObject(node, props, previous, propName, propValue) {
+    var previousValue = previous ? previous[propName] : undefined
+
+    // Set attributes
+    if (propName === "attributes") {
+        for (var attrName in propValue) {
+            var attrValue = propValue[attrName]
+
+            if (attrValue === undefined) {
+                node.removeAttribute(attrName)
+            } else {
+                node.setAttribute(attrName, attrValue)
+            }
+        }
+
+        return
+    }
+
+    if(previousValue && isObject(previousValue) &&
+        getPrototype(previousValue) !== getPrototype(propValue)) {
+        node[propName] = propValue
+        return
+    }
+
+    if (!isObject(node[propName])) {
+        node[propName] = {}
+    }
+
+    var replacer = propName === "style" ? "" : undefined
+
+    for (var k in propValue) {
+        var value = propValue[k]
+        node[propName][k] = (value === undefined) ? replacer : value
+    }
+}
+
+function getPrototype(value) {
+    if (Object.getPrototypeOf) {
+        return Object.getPrototypeOf(value)
+    } else if (value.__proto__) {
+        return value.__proto__
+    } else if (value.constructor) {
+        return value.constructor.prototype
+    }
+}
+
+},{"../vnode/is-vhook.js":46,"is-object":31}],35:[function(require,module,exports){
+var document = require("global/document")
+
+var applyProperties = require("./apply-properties")
+
+var isVNode = require("../vnode/is-vnode.js")
+var isVText = require("../vnode/is-vtext.js")
+var isWidget = require("../vnode/is-widget.js")
+var handleThunk = require("../vnode/handle-thunk.js")
+
+module.exports = createElement
+
+function createElement(vnode, opts) {
+    var doc = opts ? opts.document || document : document
+    var warn = opts ? opts.warn : null
+
+    vnode = handleThunk(vnode).a
+
+    if (isWidget(vnode)) {
+        return vnode.init()
+    } else if (isVText(vnode)) {
+        return doc.createTextNode(vnode.text)
+    } else if (!isVNode(vnode)) {
+        if (warn) {
+            warn("Item is not a valid virtual dom node", vnode)
+        }
+        return null
+    }
+
+    var node = (vnode.namespace === null) ?
+        doc.createElement(vnode.tagName) :
+        doc.createElementNS(vnode.namespace, vnode.tagName)
+
+    var props = vnode.properties
+    applyProperties(node, props)
+
+    var children = vnode.children
+
+    for (var i = 0; i < children.length; i++) {
+        var childNode = createElement(children[i], opts)
+        if (childNode) {
+            node.appendChild(childNode)
+        }
+    }
+
+    return node
+}
+
+},{"../vnode/handle-thunk.js":44,"../vnode/is-vnode.js":47,"../vnode/is-vtext.js":48,"../vnode/is-widget.js":49,"./apply-properties":34,"global/document":30}],36:[function(require,module,exports){
+// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
+// We don't want to read all of the DOM nodes in the tree so we use
+// the in-order tree indexing to eliminate recursion down certain branches.
+// We only recurse into a DOM node if we know that it contains a child of
+// interest.
+
+var noChild = {}
+
+module.exports = domIndex
+
+function domIndex(rootNode, tree, indices, nodes) {
+    if (!indices || indices.length === 0) {
+        return {}
+    } else {
+        indices.sort(ascending)
+        return recurse(rootNode, tree, indices, nodes, 0)
+    }
+}
+
+function recurse(rootNode, tree, indices, nodes, rootIndex) {
+    nodes = nodes || {}
+
+
+    if (rootNode) {
+        if (indexInRange(indices, rootIndex, rootIndex)) {
+            nodes[rootIndex] = rootNode
+        }
+
+        var vChildren = tree.children
+
+        if (vChildren) {
+
+            var childNodes = rootNode.childNodes
+
+            for (var i = 0; i < tree.children.length; i++) {
+                rootIndex += 1
+
+                var vChild = vChildren[i] || noChild
+                var nextIndex = rootIndex + (vChild.count || 0)
+
+                // skip recursion down the tree if there are no nodes down here
+                if (indexInRange(indices, rootIndex, nextIndex)) {
+                    recurse(childNodes[i], vChild, indices, nodes, rootIndex)
+                }
+
+                rootIndex = nextIndex
+            }
+        }
+    }
+
+    return nodes
+}
+
+// Binary search for an index in the interval [left, right]
+function indexInRange(indices, left, right) {
+    if (indices.length === 0) {
+        return false
+    }
+
+    var minIndex = 0
+    var maxIndex = indices.length - 1
+    var currentIndex
+    var currentItem
+
+    while (minIndex <= maxIndex) {
+        currentIndex = ((maxIndex + minIndex) / 2) >> 0
+        currentItem = indices[currentIndex]
+
+        if (minIndex === maxIndex) {
+            return currentItem >= left && currentItem <= right
+        } else if (currentItem < left) {
+            minIndex = currentIndex + 1
+        } else  if (currentItem > right) {
+            maxIndex = currentIndex - 1
+        } else {
+            return true
+        }
+    }
+
+    return false;
+}
+
+function ascending(a, b) {
+    return a > b ? 1 : -1
+}
+
+},{}],37:[function(require,module,exports){
+var applyProperties = require("./apply-properties")
+
+var isWidget = require("../vnode/is-widget.js")
+var VPatch = require("../vnode/vpatch.js")
+
+var render = require("./create-element")
+var updateWidget = require("./update-widget")
+
+module.exports = applyPatch
+
+function applyPatch(vpatch, domNode, renderOptions) {
+    var type = vpatch.type
+    var vNode = vpatch.vNode
+    var patch = vpatch.patch
+
+    switch (type) {
+        case VPatch.REMOVE:
+            return removeNode(domNode, vNode)
+        case VPatch.INSERT:
+            return insertNode(domNode, patch, renderOptions)
+        case VPatch.VTEXT:
+            return stringPatch(domNode, vNode, patch, renderOptions)
+        case VPatch.WIDGET:
+            return widgetPatch(domNode, vNode, patch, renderOptions)
+        case VPatch.VNODE:
+            return vNodePatch(domNode, vNode, patch, renderOptions)
+        case VPatch.ORDER:
+            reorderChildren(domNode, patch)
+            return domNode
+        case VPatch.PROPS:
+            applyProperties(domNode, patch, vNode.properties)
+            return domNode
+        case VPatch.THUNK:
+            return replaceRoot(domNode,
+                renderOptions.patch(domNode, patch, renderOptions))
+        default:
+            return domNode
+    }
+}
+
+function removeNode(domNode, vNode) {
+    var parentNode = domNode.parentNode
+
+    if (parentNode) {
+        parentNode.removeChild(domNode)
+    }
+
+    destroyWidget(domNode, vNode);
+
+    return null
+}
+
+function insertNode(parentNode, vNode, renderOptions) {
+    var newNode = render(vNode, renderOptions)
+
+    if (parentNode) {
+        parentNode.appendChild(newNode)
+    }
+
+    return parentNode
+}
+
+function stringPatch(domNode, leftVNode, vText, renderOptions) {
+    var newNode
+
+    if (domNode.nodeType === 3) {
+        domNode.replaceData(0, domNode.length, vText.text)
+        newNode = domNode
+    } else {
+        var parentNode = domNode.parentNode
+        newNode = render(vText, renderOptions)
+
+        if (parentNode) {
+            parentNode.replaceChild(newNode, domNode)
+        }
+    }
+
+    return newNode
+}
+
+function widgetPatch(domNode, leftVNode, widget, renderOptions) {
+    var updating = updateWidget(leftVNode, widget)
+    var newNode
+
+    if (updating) {
+        newNode = widget.update(leftVNode, domNode) || domNode
+    } else {
+        newNode = render(widget, renderOptions)
+    }
+
+    var parentNode = domNode.parentNode
+
+    if (parentNode && newNode !== domNode) {
+        parentNode.replaceChild(newNode, domNode)
+    }
+
+    if (!updating) {
+        destroyWidget(domNode, leftVNode)
+    }
+
+    return newNode
+}
+
+function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
+    var parentNode = domNode.parentNode
+    var newNode = render(vNode, renderOptions)
+
+    if (parentNode) {
+        parentNode.replaceChild(newNode, domNode)
+    }
+
+    return newNode
+}
+
+function destroyWidget(domNode, w) {
+    if (typeof w.destroy === "function" && isWidget(w)) {
+        w.destroy(domNode)
+    }
+}
+
+function reorderChildren(domNode, bIndex) {
+    var children = []
+    var childNodes = domNode.childNodes
+    var len = childNodes.length
+    var i
+    var reverseIndex = bIndex.reverse
+
+    for (i = 0; i < len; i++) {
+        children.push(domNode.childNodes[i])
+    }
+
+    var insertOffset = 0
+    var move
+    var node
+    var insertNode
+    var chainLength
+    var insertedLength
+    var nextSibling
+    for (i = 0; i < len;) {
+        move = bIndex[i]
+        chainLength = 1
+        if (move !== undefined && move !== i) {
+            // try to bring forward as long of a chain as possible
+            while (bIndex[i + chainLength] === move + chainLength) {
+                chainLength++;
+            }
+
+            // the element currently at this index will be moved later so increase the insert offset
+            if (reverseIndex[i] > i + chainLength) {
+                insertOffset++
+            }
+
+            node = children[move]
+            insertNode = childNodes[i + insertOffset] || null
+            insertedLength = 0
+            while (node !== insertNode && insertedLength++ < chainLength) {
+                domNode.insertBefore(node, insertNode);
+                node = children[move + insertedLength];
+            }
+
+            // the moved element came from the front of the array so reduce the insert offset
+            if (move + chainLength < i) {
+                insertOffset--
+            }
+        }
+
+        // element at this index is scheduled to be removed so increase insert offset
+        if (i in bIndex.removes) {
+            insertOffset++
+        }
+
+        i += chainLength
+    }
+}
+
+function replaceRoot(oldRoot, newRoot) {
+    if (oldRoot && newRoot && oldRoot !== newRoot && oldRoot.parentNode) {
+        oldRoot.parentNode.replaceChild(newRoot, oldRoot)
+    }
+
+    return newRoot;
+}
+
+},{"../vnode/is-widget.js":49,"../vnode/vpatch.js":52,"./apply-properties":34,"./create-element":35,"./update-widget":39}],38:[function(require,module,exports){
+var document = require("global/document")
+var isArray = require("x-is-array")
+
+var domIndex = require("./dom-index")
+var patchOp = require("./patch-op")
+module.exports = patch
+
+function patch(rootNode, patches) {
+    return patchRecursive(rootNode, patches)
+}
+
+function patchRecursive(rootNode, patches, renderOptions) {
+    var indices = patchIndices(patches)
+
+    if (indices.length === 0) {
+        return rootNode
+    }
+
+    var index = domIndex(rootNode, patches.a, indices)
+    var ownerDocument = rootNode.ownerDocument
+
+    if (!renderOptions) {
+        renderOptions = { patch: patchRecursive }
+        if (ownerDocument !== document) {
+            renderOptions.document = ownerDocument
+        }
+    }
+
+    for (var i = 0; i < indices.length; i++) {
+        var nodeIndex = indices[i]
+        rootNode = applyPatch(rootNode,
+            index[nodeIndex],
+            patches[nodeIndex],
+            renderOptions)
+    }
+
+    return rootNode
+}
+
+function applyPatch(rootNode, domNode, patchList, renderOptions) {
+    if (!domNode) {
+        return rootNode
+    }
+
+    var newNode
+
+    if (isArray(patchList)) {
+        for (var i = 0; i < patchList.length; i++) {
+            newNode = patchOp(patchList[i], domNode, renderOptions)
+
+            if (domNode === rootNode) {
+                rootNode = newNode
+            }
+        }
+    } else {
+        newNode = patchOp(patchList, domNode, renderOptions)
+
+        if (domNode === rootNode) {
+            rootNode = newNode
+        }
+    }
+
+    return rootNode
+}
+
+function patchIndices(patches) {
+    var indices = []
+
+    for (var key in patches) {
+        if (key !== "a") {
+            indices.push(Number(key))
+        }
+    }
+
+    return indices
+}
+
+},{"./dom-index":36,"./patch-op":37,"global/document":30,"x-is-array":32}],39:[function(require,module,exports){
+var isWidget = require("../vnode/is-widget.js")
+
+module.exports = updateWidget
+
+function updateWidget(a, b) {
+    if (isWidget(a) && isWidget(b)) {
+        if ("name" in a && "name" in b) {
+            return a.id === b.id
+        } else {
+            return a.init === b.init
+        }
+    }
+
+    return false
+}
+
+},{"../vnode/is-widget.js":49}],40:[function(require,module,exports){
+'use strict';
+
+var EvStore = require('ev-store');
+
+module.exports = EvHook;
+
+function EvHook(value) {
+    if (!(this instanceof EvHook)) {
+        return new EvHook(value);
+    }
+
+    this.value = value;
+}
+
+EvHook.prototype.hook = function (node, propertyName) {
+    var es = EvStore(node);
+    var propName = propertyName.substr(3);
+
+    es[propName] = this.value;
+};
+
+EvHook.prototype.unhook = function(node, propertyName) {
+    var es = EvStore(node);
+    var propName = propertyName.substr(3);
+
+    es[propName] = undefined;
+};
+
+},{"ev-store":27}],41:[function(require,module,exports){
+'use strict';
+
+module.exports = SoftSetHook;
+
+function SoftSetHook(value) {
+    if (!(this instanceof SoftSetHook)) {
+        return new SoftSetHook(value);
+    }
+
+    this.value = value;
+}
+
+SoftSetHook.prototype.hook = function (node, propertyName) {
+    if (node[propertyName] !== this.value) {
+        node[propertyName] = this.value;
+    }
+};
+
+},{}],42:[function(require,module,exports){
+'use strict';
+
+var isArray = require('x-is-array');
+
+var VNode = require('../vnode/vnode.js');
+var VText = require('../vnode/vtext.js');
+var isVNode = require('../vnode/is-vnode');
+var isVText = require('../vnode/is-vtext');
+var isWidget = require('../vnode/is-widget');
+var isHook = require('../vnode/is-vhook');
+var isVThunk = require('../vnode/is-thunk');
+
+var parseTag = require('./parse-tag.js');
+var softSetHook = require('./hooks/soft-set-hook.js');
+var evHook = require('./hooks/ev-hook.js');
+
+module.exports = h;
+
+function h(tagName, properties, children) {
+    var childNodes = [];
+    var tag, props, key, namespace;
+
+    if (!children && isChildren(properties)) {
+        children = properties;
+        props = {};
+    }
+
+    props = props || properties || {};
+    tag = parseTag(tagName, props);
+
+    // support keys
+    if (props.hasOwnProperty('key')) {
+        key = props.key;
+        props.key = undefined;
+    }
+
+    // support namespace
+    if (props.hasOwnProperty('namespace')) {
+        namespace = props.namespace;
+        props.namespace = undefined;
+    }
+
+    // fix cursor bug
+    if (tag === 'INPUT' &&
+        !namespace &&
+        props.hasOwnProperty('value') &&
+        props.value !== undefined &&
+        !isHook(props.value)
+    ) {
+        props.value = softSetHook(props.value);
+    }
+
+    transformProperties(props);
+
+    if (children !== undefined && children !== null) {
+        addChild(children, childNodes, tag, props);
+    }
+
+
+    return new VNode(tag, props, childNodes, key, namespace);
+}
+
+function addChild(c, childNodes, tag, props) {
+    if (typeof c == 'number') {
+        c = '' + c;
+    }
+    if (typeof c === 'string') {
+        childNodes.push(new VText(c));
+    } else if (isChild(c)) {
+        childNodes.push(c);
+    } else if (isArray(c)) {
+        for (var i = 0; i < c.length; i++) {
+            addChild(c[i], childNodes, tag, props);
+        }
+    } else if (c === null || c === undefined) {
+        return;
+    } else {
+        throw UnexpectedVirtualElement({
+            foreignObject: c,
+            parentVnode: {
+                tagName: tag,
+                properties: props
+            }
+        });
+    }
+}
+
+function transformProperties(props) {
+    for (var propName in props) {
+        if (props.hasOwnProperty(propName)) {
+            var value = props[propName];
+
+            if (isHook(value)) {
+                continue;
+            }
+
+            if (propName.substr(0, 3) === 'ev-') {
+                // add ev-foo support
+                props[propName] = evHook(value);
+            }
+        }
+    }
+}
+
+function isChild(x) {
+    return isVNode(x) || isVText(x) || isWidget(x) || isVThunk(x);
+}
+
+function isChildren(x) {
+    return typeof x === 'string' || isArray(x) || isChild(x);
+}
+
+function UnexpectedVirtualElement(data) {
+    var err = new Error();
+
+    err.type = 'virtual-hyperscript.unexpected.virtual-element';
+    err.message = 'Unexpected virtual child passed to h().\n' +
+        'Expected a VNode / Vthunk / VWidget / string but:\n' +
+        'got:\n' +
+        errorString(data.foreignObject) +
+        '.\n' +
+        'The parent vnode is:\n' +
+        errorString(data.parentVnode)
+        '\n' +
+        'Suggested fix: change your `h(..., [ ... ])` callsite.';
+    err.foreignObject = data.foreignObject;
+    err.parentVnode = data.parentVnode;
+
+    return err;
+}
+
+function errorString(obj) {
+    try {
+        return JSON.stringify(obj, null, '    ');
+    } catch (e) {
+        return String(obj);
+    }
+}
+
+},{"../vnode/is-thunk":45,"../vnode/is-vhook":46,"../vnode/is-vnode":47,"../vnode/is-vtext":48,"../vnode/is-widget":49,"../vnode/vnode.js":51,"../vnode/vtext.js":53,"./hooks/ev-hook.js":40,"./hooks/soft-set-hook.js":41,"./parse-tag.js":43,"x-is-array":32}],43:[function(require,module,exports){
+'use strict';
+
+var split = require('browser-split');
+
+var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/;
+var notClassId = /^\.|#/;
+
+module.exports = parseTag;
+
+function parseTag(tag, props) {
+    if (!tag) {
+        return 'DIV';
+    }
+
+    var noId = !(props.hasOwnProperty('id'));
+
+    var tagParts = split(tag, classIdSplit);
+    var tagName = null;
+
+    if (notClassId.test(tagParts[1])) {
+        tagName = 'DIV';
+    }
+
+    var classes, part, type, i;
+
+    for (i = 0; i < tagParts.length; i++) {
+        part = tagParts[i];
+
+        if (!part) {
+            continue;
+        }
+
+        type = part.charAt(0);
+
+        if (!tagName) {
+            tagName = part;
+        } else if (type === '.') {
+            classes = classes || [];
+            classes.push(part.substring(1, part.length));
+        } else if (type === '#' && noId) {
+            props.id = part.substring(1, part.length);
+        }
+    }
+
+    if (classes) {
+        if (props.className) {
+            classes.push(props.className);
+        }
+
+        props.className = classes.join(' ');
+    }
+
+    return props.namespace ? tagName : tagName.toUpperCase();
+}
+
+},{"browser-split":26}],44:[function(require,module,exports){
+var isVNode = require("./is-vnode")
+var isVText = require("./is-vtext")
+var isWidget = require("./is-widget")
+var isThunk = require("./is-thunk")
+
+module.exports = handleThunk
+
+function handleThunk(a, b) {
+    var renderedA = a
+    var renderedB = b
+
+    if (isThunk(b)) {
+        renderedB = renderThunk(b, a)
+    }
+
+    if (isThunk(a)) {
+        renderedA = renderThunk(a, null)
+    }
+
+    return {
+        a: renderedA,
+        b: renderedB
+    }
+}
+
+function renderThunk(thunk, previous) {
+    var renderedThunk = thunk.vnode
+
+    if (!renderedThunk) {
+        renderedThunk = thunk.vnode = thunk.render(previous)
+    }
+
+    if (!(isVNode(renderedThunk) ||
+            isVText(renderedThunk) ||
+            isWidget(renderedThunk))) {
+        throw new Error("thunk did not return a valid node");
+    }
+
+    return renderedThunk
+}
+
+},{"./is-thunk":45,"./is-vnode":47,"./is-vtext":48,"./is-widget":49}],45:[function(require,module,exports){
+module.exports = isThunk
+
+function isThunk(t) {
+    return t && t.type === "Thunk"
+}
+
+},{}],46:[function(require,module,exports){
+module.exports = isHook
+
+function isHook(hook) {
+    return hook &&
+      (typeof hook.hook === "function" && !hook.hasOwnProperty("hook") ||
+       typeof hook.unhook === "function" && !hook.hasOwnProperty("unhook"))
+}
+
+},{}],47:[function(require,module,exports){
+var version = require("./version")
+
+module.exports = isVirtualNode
+
+function isVirtualNode(x) {
+    return x && x.type === "VirtualNode" && x.version === version
+}
+
+},{"./version":50}],48:[function(require,module,exports){
+var version = require("./version")
+
+module.exports = isVirtualText
+
+function isVirtualText(x) {
+    return x && x.type === "VirtualText" && x.version === version
+}
+
+},{"./version":50}],49:[function(require,module,exports){
+module.exports = isWidget
+
+function isWidget(w) {
+    return w && w.type === "Widget"
+}
+
+},{}],50:[function(require,module,exports){
+module.exports = "1"
+
+},{}],51:[function(require,module,exports){
+var version = require("./version")
+var isVNode = require("./is-vnode")
+var isWidget = require("./is-widget")
+var isThunk = require("./is-thunk")
+var isVHook = require("./is-vhook")
+
+module.exports = VirtualNode
+
+var noProperties = {}
+var noChildren = []
+
+function VirtualNode(tagName, properties, children, key, namespace) {
+    this.tagName = tagName
+    this.properties = properties || noProperties
+    this.children = children || noChildren
+    this.key = key != null ? String(key) : undefined
+    this.namespace = (typeof namespace === "string") ? namespace : null
+
+    var count = (children && children.length) || 0
+    var descendants = 0
+    var hasWidgets = false
+    var hasThunks = false
+    var descendantHooks = false
+    var hooks
+
+    for (var propName in properties) {
+        if (properties.hasOwnProperty(propName)) {
+            var property = properties[propName]
+            if (isVHook(property) && property.unhook) {
+                if (!hooks) {
+                    hooks = {}
+                }
+
+                hooks[propName] = property
+            }
+        }
+    }
+
+    for (var i = 0; i < count; i++) {
+        var child = children[i]
+        if (isVNode(child)) {
+            descendants += child.count || 0
+
+            if (!hasWidgets && child.hasWidgets) {
+                hasWidgets = true
+            }
+
+            if (!hasThunks && child.hasThunks) {
+                hasThunks = true
+            }
+
+            if (!descendantHooks && (child.hooks || child.descendantHooks)) {
+                descendantHooks = true
+            }
+        } else if (!hasWidgets && isWidget(child)) {
+            if (typeof child.destroy === "function") {
+                hasWidgets = true
+            }
+        } else if (!hasThunks && isThunk(child)) {
+            hasThunks = true;
+        }
+    }
+
+    this.count = count + descendants
+    this.hasWidgets = hasWidgets
+    this.hasThunks = hasThunks
+    this.hooks = hooks
+    this.descendantHooks = descendantHooks
+}
+
+VirtualNode.prototype.version = version
+VirtualNode.prototype.type = "VirtualNode"
+
+},{"./is-thunk":45,"./is-vhook":46,"./is-vnode":47,"./is-widget":49,"./version":50}],52:[function(require,module,exports){
+var version = require("./version")
+
+VirtualPatch.NONE = 0
+VirtualPatch.VTEXT = 1
+VirtualPatch.VNODE = 2
+VirtualPatch.WIDGET = 3
+VirtualPatch.PROPS = 4
+VirtualPatch.ORDER = 5
+VirtualPatch.INSERT = 6
+VirtualPatch.REMOVE = 7
+VirtualPatch.THUNK = 8
+
+module.exports = VirtualPatch
+
+function VirtualPatch(type, vNode, patch) {
+    this.type = Number(type)
+    this.vNode = vNode
+    this.patch = patch
+}
+
+VirtualPatch.prototype.version = version
+VirtualPatch.prototype.type = "VirtualPatch"
+
+},{"./version":50}],53:[function(require,module,exports){
+var version = require("./version")
+
+module.exports = VirtualText
+
+function VirtualText(text) {
+    this.text = String(text)
+}
+
+VirtualText.prototype.version = version
+VirtualText.prototype.type = "VirtualText"
+
+},{"./version":50}],54:[function(require,module,exports){
+var isObject = require("is-object")
+var isHook = require("../vnode/is-vhook")
+
+module.exports = diffProps
+
+function diffProps(a, b) {
+    var diff
+
+    for (var aKey in a) {
+        if (!(aKey in b)) {
+            diff = diff || {}
+            diff[aKey] = undefined
+        }
+
+        var aValue = a[aKey]
+        var bValue = b[aKey]
+
+        if (aValue === bValue) {
+            continue
+        } else if (isObject(aValue) && isObject(bValue)) {
+            if (getPrototype(bValue) !== getPrototype(aValue)) {
+                diff = diff || {}
+                diff[aKey] = bValue
+            } else if (isHook(bValue)) {
+                 diff = diff || {}
+                 diff[aKey] = bValue
+            } else {
+                var objectDiff = diffProps(aValue, bValue)
+                if (objectDiff) {
+                    diff = diff || {}
+                    diff[aKey] = objectDiff
+                }
+            }
+        } else {
+            diff = diff || {}
+            diff[aKey] = bValue
+        }
+    }
+
+    for (var bKey in b) {
+        if (!(bKey in a)) {
+            diff = diff || {}
+            diff[bKey] = b[bKey]
+        }
+    }
+
+    return diff
+}
+
+function getPrototype(value) {
+  if (Object.getPrototypeOf) {
+    return Object.getPrototypeOf(value)
+  } else if (value.__proto__) {
+    return value.__proto__
+  } else if (value.constructor) {
+    return value.constructor.prototype
+  }
+}
+
+},{"../vnode/is-vhook":46,"is-object":31}],55:[function(require,module,exports){
+var isArray = require("x-is-array")
+
+var VPatch = require("../vnode/vpatch")
+var isVNode = require("../vnode/is-vnode")
+var isVText = require("../vnode/is-vtext")
+var isWidget = require("../vnode/is-widget")
+var isThunk = require("../vnode/is-thunk")
+var handleThunk = require("../vnode/handle-thunk")
+
+var diffProps = require("./diff-props")
+
+module.exports = diff
+
+function diff(a, b) {
+    var patch = { a: a }
+    walk(a, b, patch, 0)
+    return patch
+}
+
+function walk(a, b, patch, index) {
+    if (a === b) {
+        return
+    }
+
+    var apply = patch[index]
+    var applyClear = false
+
+    if (isThunk(a) || isThunk(b)) {
+        thunks(a, b, patch, index)
+    } else if (b == null) {
+
+        // If a is a widget we will add a remove patch for it
+        // Otherwise any child widgets/hooks must be destroyed.
+        // This prevents adding two remove patches for a widget.
+        if (!isWidget(a)) {
+            clearState(a, patch, index)
+            apply = patch[index]
+        }
+
+        apply = appendPatch(apply, new VPatch(VPatch.REMOVE, a, b))
+    } else if (isVNode(b)) {
+        if (isVNode(a)) {
+            if (a.tagName === b.tagName &&
+                a.namespace === b.namespace &&
+                a.key === b.key) {
+                var propsPatch = diffProps(a.properties, b.properties)
+                if (propsPatch) {
+                    apply = appendPatch(apply,
+                        new VPatch(VPatch.PROPS, a, propsPatch))
+                }
+                apply = diffChildren(a, b, patch, apply, index)
+            } else {
+                apply = appendPatch(apply, new VPatch(VPatch.VNODE, a, b))
+                applyClear = true
+            }
+        } else {
+            apply = appendPatch(apply, new VPatch(VPatch.VNODE, a, b))
+            applyClear = true
+        }
+    } else if (isVText(b)) {
+        if (!isVText(a)) {
+            apply = appendPatch(apply, new VPatch(VPatch.VTEXT, a, b))
+            applyClear = true
+        } else if (a.text !== b.text) {
+            apply = appendPatch(apply, new VPatch(VPatch.VTEXT, a, b))
+        }
+    } else if (isWidget(b)) {
+        if (!isWidget(a)) {
+            applyClear = true;
+        }
+
+        apply = appendPatch(apply, new VPatch(VPatch.WIDGET, a, b))
+    }
+
+    if (apply) {
+        patch[index] = apply
+    }
+
+    if (applyClear) {
+        clearState(a, patch, index)
+    }
+}
+
+function diffChildren(a, b, patch, apply, index) {
+    var aChildren = a.children
+    var bChildren = reorder(aChildren, b.children)
+
+    var aLen = aChildren.length
+    var bLen = bChildren.length
+    var len = aLen > bLen ? aLen : bLen
+
+    for (var i = 0; i < len; i++) {
+        var leftNode = aChildren[i]
+        var rightNode = bChildren[i]
+        index += 1
+
+        if (!leftNode) {
+            if (rightNode) {
+                // Excess nodes in b need to be added
+                apply = appendPatch(apply,
+                    new VPatch(VPatch.INSERT, null, rightNode))
+            }
+        } else {
+            walk(leftNode, rightNode, patch, index)
+        }
+
+        if (isVNode(leftNode) && leftNode.count) {
+            index += leftNode.count
+        }
+    }
+
+    if (bChildren.moves) {
+        // Reorder nodes last
+        apply = appendPatch(apply, new VPatch(VPatch.ORDER, a, bChildren.moves))
+    }
+
+    return apply
+}
+
+function clearState(vNode, patch, index) {
+    // TODO: Make this a single walk, not two
+    unhook(vNode, patch, index)
+    destroyWidgets(vNode, patch, index)
+}
+
+// Patch records for all destroyed widgets must be added because we need
+// a DOM node reference for the destroy function
+function destroyWidgets(vNode, patch, index) {
+    if (isWidget(vNode)) {
+        if (typeof vNode.destroy === "function") {
+            patch[index] = appendPatch(
+                patch[index],
+                new VPatch(VPatch.REMOVE, vNode, null)
+            )
+        }
+    } else if (isVNode(vNode) && (vNode.hasWidgets || vNode.hasThunks)) {
+        var children = vNode.children
+        var len = children.length
+        for (var i = 0; i < len; i++) {
+            var child = children[i]
+            index += 1
+
+            destroyWidgets(child, patch, index)
+
+            if (isVNode(child) && child.count) {
+                index += child.count
+            }
+        }
+    } else if (isThunk(vNode)) {
+        thunks(vNode, null, patch, index)
+    }
+}
+
+// Create a sub-patch for thunks
+function thunks(a, b, patch, index) {
+    var nodes = handleThunk(a, b);
+    var thunkPatch = diff(nodes.a, nodes.b)
+    if (hasPatches(thunkPatch)) {
+        patch[index] = new VPatch(VPatch.THUNK, null, thunkPatch)
+    }
+}
+
+function hasPatches(patch) {
+    for (var index in patch) {
+        if (index !== "a") {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Execute hooks when two nodes are identical
+function unhook(vNode, patch, index) {
+    if (isVNode(vNode)) {
+        if (vNode.hooks) {
+            patch[index] = appendPatch(
+                patch[index],
+                new VPatch(
+                    VPatch.PROPS,
+                    vNode,
+                    undefinedKeys(vNode.hooks)
+                )
+            )
+        }
+
+        if (vNode.descendantHooks || vNode.hasThunks) {
+            var children = vNode.children
+            var len = children.length
+            for (var i = 0; i < len; i++) {
+                var child = children[i]
+                index += 1
+
+                unhook(child, patch, index)
+
+                if (isVNode(child) && child.count) {
+                    index += child.count
+                }
+            }
+        }
+    } else if (isThunk(vNode)) {
+        thunks(vNode, null, patch, index)
+    }
+}
+
+function undefinedKeys(obj) {
+    var result = {}
+
+    for (var key in obj) {
+        result[key] = undefined
+    }
+
+    return result
+}
+
+// List diff, naive left to right reordering
+function reorder(aChildren, bChildren) {
+
+    var bKeys = keyIndex(bChildren)
+
+    if (!bKeys) {
+        return bChildren
+    }
+
+    var aKeys = keyIndex(aChildren)
+
+    if (!aKeys) {
+        return bChildren
+    }
+
+    var bMatch = {}, aMatch = {}
+
+    for (var aKey in bKeys) {
+        bMatch[bKeys[aKey]] = aKeys[aKey]
+    }
+
+    for (var bKey in aKeys) {
+        aMatch[aKeys[bKey]] = bKeys[bKey]
+    }
+
+    var aLen = aChildren.length
+    var bLen = bChildren.length
+    var len = aLen > bLen ? aLen : bLen
+    var shuffle = []
+    var freeIndex = 0
+    var i = 0
+    var moveIndex = 0
+    var moves = {}
+    var removes = moves.removes = {}
+    var reverse = moves.reverse = {}
+    var hasMoves = false
+
+    while (freeIndex < len) {
+        var move = aMatch[i]
+        if (move !== undefined) {
+            shuffle[i] = bChildren[move]
+            if (move !== moveIndex) {
+                moves[move] = moveIndex
+                reverse[moveIndex] = move
+                hasMoves = true
+            }
+            moveIndex++
+        } else if (i in aMatch) {
+            shuffle[i] = undefined
+            removes[i] = moveIndex++
+            hasMoves = true
+        } else {
+            while (bMatch[freeIndex] !== undefined) {
+                freeIndex++
+            }
+
+            if (freeIndex < len) {
+                var freeChild = bChildren[freeIndex]
+                if (freeChild) {
+                    shuffle[i] = freeChild
+                    if (freeIndex !== moveIndex) {
+                        hasMoves = true
+                        moves[freeIndex] = moveIndex
+                        reverse[moveIndex] = freeIndex
+                    }
+                    moveIndex++
+                }
+                freeIndex++
+            }
+        }
+        i++
+    }
+
+    if (hasMoves) {
+        shuffle.moves = moves
+    }
+
+    return shuffle
+}
+
+function keyIndex(children) {
+    var i, keys
+
+    for (i = 0; i < children.length; i++) {
+        var child = children[i]
+
+        if (child.key !== undefined) {
+            keys = keys || {}
+            keys[child.key] = i
+        }
+    }
+
+    return keys
+}
+
+function appendPatch(apply, patch) {
+    if (apply) {
+        if (isArray(apply)) {
+            apply.push(patch)
+        } else {
+            apply = [apply, patch]
+        }
+
+        return apply
+    } else {
+        return patch
+    }
+}
+
+},{"../vnode/handle-thunk":44,"../vnode/is-thunk":45,"../vnode/is-vnode":47,"../vnode/is-vtext":48,"../vnode/is-widget":49,"../vnode/vpatch":52,"./diff-props":54,"x-is-array":32}],56:[function(require,module,exports){
+
+},{}]},{},[1]);
