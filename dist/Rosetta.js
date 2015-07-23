@@ -22,7 +22,7 @@ window.Rosetta = Rosetta;
 
 ready(Rosetta.init);
 
-},{"./lib/rosetta.js":19,"./lib/shims.js":20}],2:[function(require,module,exports){
+},{"./lib/rosetta.js":20,"./lib/shims.js":21}],2:[function(require,module,exports){
 var h = require('./virtual-dom/h'),
     diff = require('./virtual-dom/diff'),
     patch = require('./virtual-dom/patch'),
@@ -33,6 +33,7 @@ var utils = require('./utils.js'),
     bind = utils.bind,
     fire = utils.fire,
     isDomNode = utils.isDomNode,
+    updateRefs = utils.updateRefs,
 
     lifeEvents = require('./lifeEvents.js'),
     ATTACHED = lifeEvents.ATTACHED,
@@ -45,14 +46,30 @@ var supportEvent = require('./supportEvent.js'),
     utils = require('./utils.js'),
     isString = utils.isString;
 
+/**
+ * @function for event binding
+ * @param {string} type - the name of the event
+ * @param {string} listener - callback of the event
+ * @param {object} context - the custom context when executing callback
+ * @param {string} ifOnce - whether the callback will be executed once
+ */
 function on(type, listener, context, ifOnce) {
     bind.call(this, type, listener, context, ifOnce);
 }
 
+/**
+ * @function for event triggering
+ * @param {string} type - the name of the event
+ */
 function trigger(type) {
     fire.call(this, type);
 }
 
+
+/**
+ * @function for event unbinding
+ * @param {string} type - the name of the event to be unbinded
+ */
 function off(type) {
     if (!type) {
         this.events = [];
@@ -61,10 +78,35 @@ function off(type) {
     delete this.events[type];
 }
 
+/**
+ * @function for event triggering only once
+ * @param {string} type - the name of the event
+ * @param {function} listener - callback of the event
+ * @param {object} context - the custom context when executing callback
+ */
 function once(type, listener, context) {
     this.on(type, listener, context, true);
 }
 
+/**
+ *
+ * @function for triggering event on children
+ * @param {object} obj - rosetta element instance
+ * @param {string} type - event name
+ */
+function triggerChildren(obj, type) {
+    (obj.rosettaElems || []).map(function(item, index) {
+        triggerChildren(item.rosettaElems || []);
+
+        item.trigger(type, item);
+    });
+}
+
+/**
+ *
+ * @function for update rosetta element instance properties and rerendering UI
+ * @param {object} options - new value of properties for updating
+ */
 
 function update(options) {
     var oldTree = this.vTree,
@@ -72,27 +114,45 @@ function update(options) {
         type = this.type,
         attr = {};
 
-    attr = extend(this.attrs, options, true);
+    attr = extend(this.__config, options, true);
     var newTree = this.__t(this, attr, this.refs);
     var patches = diff(oldTree, newTree);
     this.root = patch(this.root, patches);
     this.vTree = newTree;
-    this.attrs = attr;
+    this.__config = attr;
 
     Rosetta.updateRefs(this, this.root);
 
+    this.attributeChanged.call(this);
     Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
     this.trigger(ATTRIBUTECHANGE, this);
 }
 
+
+/**
+ *
+ * @function for destroy rosetta element instance
+ *
+ */
 function destroy() {
     this.off();
     this.root.parentElement.removeChild(this.root);
+
+    this.dettached.call(this);
+
+    this.isAttached = false;
     Rosetta.triggerChildren(this, DETACHED);
     this.trigger(DETACHED, this);
     delete ref(this.name);
 }
 
+
+/**
+ *
+ * @function for creating child rosetta element instance
+ * @param {string} type - type of custom lement to be created
+ * @attr {object} attr - initial value of properties to be set to rosetta element instance
+ */
 function create(type, attr) {
     var obj = Rosetta.create.apply(Rosetta, arguments);
     // to update refs, something wrong here
@@ -109,35 +169,58 @@ function create(type, attr) {
     return obj;
 }
 
+/**
+ *
+ * @function for creating new rosetta element class
+ * @param {string} type - new type of rosetta element class
+ * @protoOptions {object} protoOptions - new settings for prototype of rosetta element
+ *
+ */
 
+function createElementClass(protoOptions) {
+    var type = protoOptions.is;
 
-function createElementClass(type, renderFunc) {
     /**
      * constructor for new custom elements
      *
      * @class CustomElement
      * @constructor
+     * @param {object} options - the custom options of the new element
      */
+
 
     function CustomElement(options) {
         extend(this, {
             type: type,
 
-            name: name,
+            name: '',
 
-            renderFunc: renderFunc,
-
-            refs: {},
+            '$': {},
 
             events: {},
 
-            isAttached: false,
+            isAttached: false
 
-            attrs: {}
         }, options || {}, true);
     }
 
-    CustomElement.prototype = {
+    extend(CustomElement.prototype, {
+        ready: function() {
+
+        },
+        created: function() {
+
+        },
+        attached: function() {
+
+        },
+        dettached: function() {
+
+        },
+        attributeChanged: function() {
+
+        }
+    }, protoOptions, {
         update: update,
 
         destroy: destroy,
@@ -146,23 +229,33 @@ function createElementClass(type, renderFunc) {
 
         on: on,
 
-        trigger: trigger,
+        once: once,
 
         off: off,
 
-        once: once,
+        fire: trigger,
 
         create: create,
 
-        __t: function(){}
+        __t: function(){},
 
-    };
+        __config: {}
+
+    }, true);
+
+    for (var key in protoOptions.properties) {
+        var value = protoOptions.properties[key];
+        if (!!value.value) {
+            CustomElement.prototype.__config[key] = value.value;
+            CustomElement.prototype[key] = value.value;
+        }
+    }
 
     return CustomElement;
 }
 
 module.exports = createElementClass;
-},{"./lifeEvents.js":17,"./supportEvent.js":21,"./utils.js":22,"./virtual-dom/create-element":23,"./virtual-dom/diff":24,"./virtual-dom/h":25,"./virtual-dom/patch":33}],3:[function(require,module,exports){
+},{"./lifeEvents.js":18,"./supportEvent.js":22,"./utils.js":23,"./virtual-dom/create-element":24,"./virtual-dom/diff":25,"./virtual-dom/h":26,"./virtual-dom/patch":34}],3:[function(require,module,exports){
 var EvStore = require("ev-store")
 
 module.exports = addEvent
@@ -644,7 +737,7 @@ if (typeof document !== 'undefined') {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"min-document":56}],11:[function(require,module,exports){
+},{"min-document":57}],11:[function(require,module,exports){
 (function (global){
 var root = typeof window !== 'undefined' ?
     window : typeof global !== 'undefined' ?
@@ -832,11 +925,207 @@ function removeEvent(target, type, handler) {
 }
 
 },{"ev-store":7}],17:[function(require,module,exports){
+/**
+ *
+ *  file: loader.js
+ *  version: 1.0.0
+ *  update: 2015.7.20
+ *
+ */
+
+var head = document.getElementsByTagName('head')[0],
+    resMap = {},
+    pkgMap = {},
+    factoryMap = {},
+    loadingMap = {},
+    scriptsMap = {},
+    timeout = 5000;
+
+/**
+ *
+ *
+ *  example:
+ *
+    Rosetta.resourceMap({
+        res: {
+            'https://ss1.bdstatic.com/5eN1bjq8AAUYm2zgoY3K/r/www/cache/static/protocol/https/jquery/jquery-1.10.2.min_f2fb5194': {
+                type: 'js',
+                url: 'https://ss1.bdstatic.com/5eN1bjq8AAUYm2zgoY3K/r/www/cache/static/protocol/https/jquery/jquery-1.10.2.min_f2fb5194.js' //,
+                //pkg: 'merge1'
+                //,
+                //deps: ['comp/a-xxx', 'comp/a-yyy', 'comp/a-rrrr', 'a-slider.css']
+            },
+
+            'a-slider.css': {
+                type: 'css',
+                url: 'a-slider_xxxxxx.css',
+                pkg: 'merge2'
+            }
+        },
+
+        pkg: {
+            'merge1': {
+                type: 'js',
+                url: 'merge1_sds2121.js'
+            },
+
+            'merge2': {
+                type: 'css',
+                url: 'merge1_sds2121.css'
+            }
+        }
+    })
+ *
+ */
+
+function resourceMap (obj) {
+    var key = '',
+        res = '',
+        pkg = '';
+
+    res = obj.res;
+
+    for (key in res) {
+        resMap[key] = res[key];
+    }
+
+    pkg = obj.pkg;
+
+    for (key in pkg) {
+        pkgMap[key] = pkg[key];
+    }
+}
+
+
+
+function alias (url) {
+    return url.replace(/\.js$/i, '');
+}
+
+
+function createScript (url, onerror) {
+    if (url in scriptsMap) return;
+
+
+    scriptsMap[url] = true;
+
+    var script = document.createElement('script');
+
+    if (onerror) {
+        var tid = setTimeout(onerror, timeout);
+
+        script.onerror = function() {
+            clearTimeout(tid);
+            onerror();
+        };
+
+        function onload() {
+            clearTimeout(tid);
+            var queue = loadingMap[alias(url)];
+            if (queue) {
+                for (var i = 0, n = queue.length; i < n; i++) {
+                    queue[i]();
+                }
+                delete loadingMap[url];
+            }
+        }
+
+        if ('onload' in script) {
+            script.onload = onload;
+        } else {
+            script.onreadystatechange = function() {
+                if (this.readyState == 'loaded' || this.readyState == 'complete') {
+                    onload();
+                }
+            }
+        }
+    }
+    script.type = 'text/javascript';
+    script.src = url;
+    head.appendChild(script);
+    return script;
+}
+
+/**
+ *
+ * @module htmlImport
+ * @param {array} urls -
+ *
+ */
+function htmlImport (urls, onload, onerror) {
+    if (typeof urls == 'string') {
+        urls = [urls];
+    }
+
+    var needMap = {};
+    var needNum = 0;
+
+    function findNeed (depArr) {
+        for (var i = 0, n = depArr.length; i < n; i++) {
+            var dep = alias(depArr[i]);
+
+            if (!(dep in factoryMap)) {
+                var child = resMap[dep] || resMap[dep + '.js'];
+
+                if (child && 'deps' in child) {
+                    findNeed(child.deps);
+                }
+            }
+
+            if (dep in needMap) {
+                continue;
+            }
+
+            needMap[dep] = true;
+            needNum++;
+            loadScript(dep, updateNeed, onerror);
+        }
+    }
+
+
+    function updateNeed () {
+        if (0 == needNum--) {
+            onload && onload.apply(window);
+        }
+    }
+
+    findNeed(urls);
+    updateNeed();
+}
+
+
+function loadScript (id, callback, onerror) {
+    var queue = loadingMap[id] || (loadingMap[id] = []);
+    queue.push(callback);
+
+    //
+    // resource map query
+    //
+    var res = resMap[id] || resMap[id + '.js'] || {};
+    var pkg = res.pkg;
+    var url;
+
+    if (pkg) {
+        url = pkgMap[pkg].url;
+    } else {
+        url = res.url || id;
+    }
+
+    createScript(url, onerror && function() {
+        onerror(id);
+    });
+}
+
+htmlImport.factoryMap = factoryMap;
+
+module.exports = htmlImport;
+},{}],18:[function(require,module,exports){
 module.exports.ATTACHED = 'attached';
 module.exports.DETACHED = 'detached';
 module.exports.CREATED = 'created';
+module.exports.READY = 'ready';
 module.exports.ATTRIBUTECHANGE = 'attributeChange';
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 var plainDom = {
     content: 'content',
     a: 'a',
@@ -975,7 +1264,7 @@ var plainDom = {
 };
 
 module.exports = plainDom;
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 /*@require ./rosetta.css*/
 /** Rosetta v1.0.1**/
 
@@ -998,11 +1287,15 @@ var supportEvent = require('./supportEvent.js'),
     fire = utils.fire,
     deserializeValue = utils.deserializeValue,
     typeHandlers = utils.typeHandlers,
+    updateRefs = utils.updateRefs,
+
+    htmlImport = require('./htmlImport.js'),
 
     lifeEvents = require('./lifeEvents.js'),
     ATTACHED = lifeEvents.ATTACHED,
     DETACHED = lifeEvents.DETACHED,
-    CREATED = lifeEvents.CREATED
+    CREATED = lifeEvents.CREATED,
+    READY = lifeEvents.READY,
     ATTRIBUTECHANGE = lifeEvents.ATTRIBUTECHANGE;
 
 var _shouldReplacedContent = [];
@@ -1013,34 +1306,70 @@ var h = require('./virtual-dom/h'),
 var Delegator = require('./dom-delegator');
 var createElementClass = require('./createElementClass.js');
 
-function attributeToAttrs(name, value) {
-  // try to match this attribute to a property (attributes are
-  // all lower-case, so this is case-insensitive search)
+
+
+/**
+ * @function attributeToProperty
+ * @param name
+ * @param value
+ */
+function attributeToProperty(name, value) {
     if (name) {
-        // filter out 'mustached' values, these are to be
-        // get original value
-        var currentValue = this.attrs[name];
-        if (typeof currentValue != typeof value) {
+        var item = this.properties[name];
+        var supportType = [Boolean, Date, Number, String, Array, Object];
+        var index = supportType.indexOf(item);
+        var typeFunc = supportType[index];
+        var currentValue = this[name];
+
+        if (index < 0) {
+            var typeFunc = item.type;
+        }
+
+
+        if (!(value instanceof typeFunc)) {
             // deserialize Boolean or Number values from attribute
-            value = deserializeValue(value, currentValue);
+            value = deserializeValue(value, typeFunc);
         }
 
         // only act if the value has changed
         if (value !== currentValue) {
-            // install new value (has side-effects)
-            this.attrs[name] = value;
+            this[name] = value;
+            this.__config[name] = value;
         }
-  }
 
+        return value;
+  }
 }
 
+/**
+ *
+ *
+ *
+ *
+ */
+function getRealAttr(attr, toRealType) {
+    var eventObj = {};
 
-function updateRefs(obj, dom) {
-    for (var key in obj.refs) {
-        var node = query('[ref="' + key + '"]', dom);
-        obj.refs[key] = node;
+    for (var i in attr) {
+        var item = attr[i];
+
+        if (toRealType === true) {
+            attr[i] = attributeToProperty.call(this, i, item);
+        }
+
+        if (supportEvent[i]) {
+            eventObj['ev-' + supportEvent[i]] = item;
+        }
+    }
+
+    attr = attr || {};
+
+    return {
+        eventObj: eventObj,
+        attr: attr
     }
 }
+
 
 function init() {
     var elems = [];
@@ -1108,13 +1437,6 @@ function elemClass(type, newClass) {
     }
 }
 
-function triggerChildren(obj, type) {
-    (obj.rosettaElems || []).map(function(item, index) {
-        triggerChildren(item.rosettaElems || []);
-
-        item.trigger(type, item);
-    });
-}
 
 function appendRoot(dom, root, force) {
     var classes = root.getAttribute('class');
@@ -1130,28 +1452,6 @@ function appendRoot(dom, root, force) {
 
 }
 
-function getRealAttr(attr, toRealType) {
-    var eventObj = {};
-
-    for (var i in attr) {
-        var item = attr[i];
-
-        if (toRealType === true) {
-            attributeToAttrs.call(this, i, item);
-        }
-
-        if (supportEvent[i]) {
-            eventObj['ev-' + supportEvent[i]] = item;
-        }
-    }
-
-    attr = attr || {};
-
-    return {
-        eventObj: eventObj,
-        attr: attr
-    }
-}
 
 function getParent(dom) {
     var parent = dom.parentElement;
@@ -1166,18 +1466,30 @@ function getParent(dom) {
     }
 }
 
-function render(vTree, root, force) {
+/**
+ *
+ * @function to render
+ *
+ */
+
+function render(rTreeDom, root, force) {
+    if (!rTreeDom) {
+        init();
+        return;
+    }
+
+    rTree = rTreeDom.rTree;
     if (isString(root)) {
         root = query(root)[0];
     }
 
-    var obj = vTree.realObj;
+    var obj = rTree.realObj;
 
-    if (!vTree || !root) {
+    if (!rTree || !root) {
         return;
     }
 
-    var dom = createElement(vTree);
+    var dom = createElement(rTree);
 
     if (obj && obj.isRosettaElem == true) {
         obj.root = dom;
@@ -1217,11 +1529,15 @@ function render(vTree, root, force) {
 
         updateRefs(obj, dom);
 
+        obj.ready.call(this);
+
         appendRoot(dom, root, force);
 
         obj.isAttached = true;
 
-        ref(obj.attrs.ref, obj);
+        ref(obj.properties.ref, obj);
+
+        obj.attached.call(obj);
 
         triggerChildren(obj, ATTACHED);
 
@@ -1237,10 +1553,13 @@ function render(vTree, root, force) {
 
 
 /**
- * Returns vTree of newly created element instance
+ * Returns rTree of newly created element instance
  *
- * @method create
- * @return {Object} vTree
+ * @function create
+ * @param {string} type - type of element to be created
+ * @param {object} attr - attributes for initialize custom element instance
+ * @param {object} arguments[2...] - children of custom element instance
+ * @return {HTMLDOMElement}
  */
 
 function create(type, attr) {
@@ -1253,7 +1572,7 @@ function create(type, attr) {
     var childrenContent = [].slice.call(arguments, 2);
 
     childrenContent = toPlainArray(childrenContent);
-    var vTree = '';
+    var rTree = '';
 
     if (isOriginalTag(type)) {
         var tmp = getRealAttr(attr);
@@ -1264,9 +1583,12 @@ function create(type, attr) {
             attributes: attr
         }, eventObj, true);
 
-        vTree = h.call(this, type, newAttrs, childrenContent);
+        rTree = h.call(this, type, newAttrs, childrenContent);
 
-        return vTree;
+        rTreeDom = createElement(rTree);
+        rTreeDom.rTree = rTree;
+
+        return rTreeDom;
     } else {
         var NewClass = elemClass(type),
             elemObj = null;
@@ -1277,17 +1599,15 @@ function create(type, attr) {
 
         elemObj = new NewClass();
 
-        elemObj.renderFunc(elemObj);
-
-
         elemObj.name = attr.ref ? attr.ref && ref(attr.ref, elemObj) : '';
 
-        getRealAttr.call(elemObj, attr, true);
-        elemObj.attrs = elemObj.attrs || attr;
+        var realAttr = getRealAttr.call(elemObj, attr, true);
 
-        vTree = elemObj.__t(elemObj, elemObj.attrs, elemObj.refs);
+        extend(elemObj, realAttr);
 
-        vTree.properties.attributes.isrosettaelem = true;
+        rTree = elemObj.__t(elemObj, realAttr, elemObj.$);
+
+        rTree.properties.attributes.isrosettaelem = true;
         if (childrenContent) {
             childrenContent.map(function(item, index) {
                 if (!item.nodeType) {
@@ -1296,24 +1616,68 @@ function create(type, attr) {
             });
 
             _shouldReplacedContent.push(childrenContent);
-            vTree.properties.attributes.shouldReplacedContent = _shouldReplacedContent.length - 1;
+            rTree.properties.attributes.shouldReplacedContent = _shouldReplacedContent.length - 1;
         }
 
-        elemObj.vTree = vTree;
-        elemObj.trigger(CREATED, elemObj);
-        vTree.realObj = elemObj;
+        elemObj.rTree = rTree;
 
-        return vTree;
+        elemObj.created.call(this);
+
+        elemObj.trigger(CREATED, elemObj);
+        rTree.realObj = elemObj;
+
+        rTreeDom = createElement(rTree);
+        rTreeDom.rTree = rTree;
+
+        return rTreeDom;
     }
 }
 
-function register(type, renderFunc) {
-    var newClass = createElementClass(type, renderFunc);
+/**
+ *
+ * @param {json} options - options for prototype of custom element
+ * @example, if it has no default value, then the value can be String/Object/
+    {
+        is: 'r-xxx'
+        ready: function() {}
+        created: function() {}
+        attached: function() {}
+        dettached: function() {}
+        attributeChanged: function() {}
+        extends: 'type name'
+        properties: {
+            aaa: 'string',//used for deserializezing from an attribute
+            bbb: [],
+            prop: {
+                type: String,
+                notify: true,
+                readOnly: true
+            }
+        }
+    }
+ * @param options.properties.xxx.type - Boolean, Date, Number, String, Array or Object
+ * @param options.properties.xxx.value - boolean, number, string or function
+ * String. No serialization required.
+ * Date or Number. Serialized using  toString.
+ * Boolean. Results in a non-valued attribute to be either set (true) or removed (false).
+ * Array or Object. Serialized using JSON.stringify.
+ *
+ */
+
+function register(options) {
+    var type = options.is;
+
+    var newClass = createElementClass(options);
 
     elemClass(type, newClass);
     return newClass;
 }
 
+/**
+ *
+ * @function
+ *
+ */
 function ready(cb) {
     if (isFunction(cb)) {
         if (_allRendered == true) {
@@ -1325,28 +1689,34 @@ function ready(cb) {
 }
 
 
-var Rosetta = {
-    init: init,
+/**
+ * @desc entrance for registering new rosetta element type
+ * @param {object} options - json object which will be set to the prototype of rosetta element class
+ *
+ */
+var Rosetta = function(options) {
+    var newClass = createElementClass(type, options);
 
-    ref: ref,
-
-    elemClass: elemClass,
-
-    render: render,
-
-    create: create,
-
-    register: register,
-
-    ready: ready,
-
-    triggerChildren: triggerChildren,
-
-    updateRefs: updateRefs
+    elemClass(type, newClass);
+    return newClass;
 };
 
+
+extend(Rosetta, {
+    'ref': ref,
+
+    'render': render,
+
+    'create': create,
+
+    'ready': ready,
+
+    'import': htmlImport
+});
+
+
 module.exports = Rosetta;
-},{"./createElementClass.js":2,"./dom-delegator":5,"./lifeEvents.js":17,"./supportEvent.js":21,"./utils.js":22,"./virtual-dom/create-element":23,"./virtual-dom/h":25}],20:[function(require,module,exports){
+},{"./createElementClass.js":2,"./dom-delegator":5,"./htmlImport.js":17,"./lifeEvents.js":18,"./supportEvent.js":22,"./utils.js":23,"./virtual-dom/create-element":24,"./virtual-dom/h":26}],21:[function(require,module,exports){
 /*!
  * https://github.com/es-shims/es5-shim
  * @license es5-shim Copyright 2009-2015 by contributors, MIT License
@@ -2040,7 +2410,14 @@ if (!replaceReportsGroupsCorrectly) {
     }
 }());
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
+/**
+ * Module representing the supported events
+ * @module supportEvent
+ * @type {object}
+ * @exports supportEvent
+ */
+
 var supportEvent = {
     // 只支持原生的
     onClick: 'click',
@@ -2092,46 +2469,92 @@ var supportEvent = {
 };
 
 module.exports = supportEvent;
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 function noopHandler(value) {
     return value;
 }
 
-var plainDom = require('./plainDom.js'),
 
+var plainDom = require('./plainDom.js');
+
+    /**
+     *
+     * @module isString
+     * @param {object} elem
+     */
     isString = module.exports.isString = function(elem) {
         return typeof elem == 'string';
     },
 
+    /**
+     *
+     * @module isDomNode
+     * @param {object} elem
+     */
     isDomNode = module.exports.isDomNode = function(elem) {
         return !!(elem && elem.nodeType === 1);
     },
 
+    /**
+     *
+     * @module isOriginalTag
+     * @param {string} str
+     */
     isOriginalTag = module.exports.isOriginalTag = function(str) {
         return !!plainDom[str];
     },
 
+    /**
+     *
+     * @module isWindow
+     * @param {object} obj
+     */
     isWindow = module.exports.isWindow = function(obj) {
         return obj != null && obj == obj.window;
     },
 
+    /**
+     *
+     * @module isPlainObject
+     * @param {object} obj
+     */
     isPlainObject = module.exports.isPlainObject = function(obj) {
         return isObject(obj) && !isWindow(obj) && Object.getPrototypeOf(obj) == Object.prototype;
     },
 
+    /**
+     *
+     * @module isArray
+     * @param {object} value
+     */
     isArray = module.exports.isArray = function(value) {
         return value instanceof Array;
     },
 
+    /**
+     *
+     * @module isObject
+     * @param {object} value
+     */
     isObject = module.exports.isObject = function(value) {
         return typeof value == 'object';
     },
 
+    /**
+     *
+     * @module isFunction
+     * @param {object} obj
+     */
     isFunction = module.exports.isFunction = function(obj) {
         return typeof obj == 'function' || false;
-    }
+    },
 
-extend = module.exports.extend = function(target) {
+    /**
+     *
+     * @module extend
+     * @param {object} target - the object which to append new json values
+     */
+    extend = module.exports.extend = function(target) {
         var end = [].slice.call(arguments, arguments.length - 2),
             deep = false,
             params = null;
@@ -2166,6 +2589,11 @@ extend = module.exports.extend = function(target) {
         return target;
     },
 
+    /**
+     *
+     * @module camelize
+     * @param {string} key
+     */
     camelize = module.exports.camelize = function(key) {
         var _reg = /-(.)/g;
         return key.replace(_reg, function(_, txt) {
@@ -2173,10 +2601,13 @@ extend = module.exports.extend = function(target) {
         });
     },
 
-    toPlainArray = module.exports.toPlainArray = function(data, result) {
-        if (!result) {
-            result = [];
-        }
+    /**
+     *
+     * @module toPlainArray
+     * @param {object} data - turn the data into plain array
+     */
+    toPlainArray = module.exports.toPlainArray = function(data) {
+        var result = [];
 
         for (var i = 0; i < data.length; i++) {
             var item = data[i];
@@ -2191,6 +2622,12 @@ extend = module.exports.extend = function(target) {
         return result;
     },
 
+    /**
+     *
+     * @module query
+     * @param {string} selector - the selector string for the wanted DOM
+     * @param {HTMLNode} element - the scope in which selector will be seached in
+     */
     query = module.exports.query = function(selector, element) {
         var found,
             maybeID = selector[0] == '#',
@@ -2215,6 +2652,14 @@ extend = module.exports.extend = function(target) {
             );
     },
 
+    /**
+     *
+     * @module bind
+     * @param {string} type - the event name
+     * @param {function} listener - callback of the event which will be executed when the event has been triggered
+     * @param {object} context - the custom context when executing callback
+     * @param {boolean} ifOnce - determin whether the callback which be executed only once
+     */
     bind = module.exports.bind = function(type, listener, context, ifOnce) {
         this.events = this.events || {};
         var queue = this.events[type] || (this.events[type] = []);
@@ -2225,6 +2670,12 @@ extend = module.exports.extend = function(target) {
         });
     },
 
+
+    /**
+     *
+     * @module fire
+     * @param {string} type - trigger event which is represented by type
+     */
     fire = module.exports.fire = function(type) {
         this.events = this.events || {};
         var slice = [].slice,
@@ -2249,17 +2700,30 @@ extend = module.exports.extend = function(target) {
         }
     },
 
-    deserializeValue = module.exports.deserializeValue = function(value, currentValue) {
+
+    /**
+     *
+     * @module deserializeValue
+     * @param {object} value - new value which will be deserialized according to the type of currentValue
+     * @param {object} currentValue - old value which to determin the type of the new value in the first param
+     */
+    deserializeValue = module.exports.deserializeValue = function(value, typeFunc) {
         // attempt to infer type from default value
-        var inferredType = typeof currentValue;
+        var inferredType = typeof typeFunc();
         // invent 'date' type value for Date
-        if (currentValue instanceof Date) {
+        if (typeFunc == Date) {
             inferredType = 'date';
         }
         // delegate deserialization via type string
         return typeHandlers[inferredType](value, currentValue);
     },
 
+
+    /**
+     *
+     * @module typeHandlers
+     *
+     */
     // helper for deserializing properties of various types to strings
     typeHandlers = module.exports.typeHandlers = {
         string: noopHandler,
@@ -2307,24 +2771,38 @@ extend = module.exports.extend = function(target) {
         'function': function(value, currentValue) {
             return currentValue;
         }
+    },
+
+
+    /**
+     *
+     * @module updateRefs
+     * @param {object} obj - the rosetta element instance
+     * @param {HTMLNode} dom - the htmlnode of the rosetta element instance
+     */
+    updateRefs = module.exports.updateRefs = function (obj, dom) {
+        for (var key in obj.$) {
+            var node = query('[ref="' + key + '"]', dom);
+            obj.$[key] = node;
+        }
     };
 
-},{"./plainDom.js":18}],23:[function(require,module,exports){
+},{"./plainDom.js":19}],24:[function(require,module,exports){
 var createElement = require("./vdom/create-element.js")
 
 module.exports = createElement
 
-},{"./vdom/create-element.js":35}],24:[function(require,module,exports){
+},{"./vdom/create-element.js":36}],25:[function(require,module,exports){
 var diff = require("./vtree/diff.js")
 
 module.exports = diff
 
-},{"./vtree/diff.js":55}],25:[function(require,module,exports){
+},{"./vtree/diff.js":56}],26:[function(require,module,exports){
 var h = require("./virtual-hyperscript/index.js")
 
 module.exports = h
 
-},{"./virtual-hyperscript/index.js":42}],26:[function(require,module,exports){
+},{"./virtual-hyperscript/index.js":43}],27:[function(require,module,exports){
 /*!
  * Cross-Browser Split 1.1.1
  * Copyright 2007-2012 Steven Levithan <stevenlevithan.com>
@@ -2432,22 +2910,22 @@ module.exports = (function split(undef) {
   return self;
 })();
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 arguments[4][7][0].apply(exports,arguments)
-},{"dup":7,"individual/one-version":29}],28:[function(require,module,exports){
+},{"dup":7,"individual/one-version":30}],29:[function(require,module,exports){
 arguments[4][8][0].apply(exports,arguments)
-},{"dup":8}],29:[function(require,module,exports){
+},{"dup":8}],30:[function(require,module,exports){
 arguments[4][9][0].apply(exports,arguments)
-},{"./index.js":28,"dup":9}],30:[function(require,module,exports){
+},{"./index.js":29,"dup":9}],31:[function(require,module,exports){
 arguments[4][10][0].apply(exports,arguments)
-},{"dup":10,"min-document":56}],31:[function(require,module,exports){
+},{"dup":10,"min-document":57}],32:[function(require,module,exports){
 "use strict";
 
 module.exports = function isObject(x) {
 	return typeof x === "object" && x !== null;
 };
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 var nativeIsArray = Array.isArray
 var toString = Object.prototype.toString
 
@@ -2457,12 +2935,12 @@ function isArray(obj) {
     return toString.call(obj) === "[object Array]"
 }
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 var patch = require("./vdom/patch.js")
 
 module.exports = patch
 
-},{"./vdom/patch.js":38}],34:[function(require,module,exports){
+},{"./vdom/patch.js":39}],35:[function(require,module,exports){
 var isObject = require("is-object")
 var isHook = require("../vnode/is-vhook.js")
 
@@ -2561,7 +3039,7 @@ function getPrototype(value) {
     }
 }
 
-},{"../vnode/is-vhook.js":46,"is-object":31}],35:[function(require,module,exports){
+},{"../vnode/is-vhook.js":47,"is-object":32}],36:[function(require,module,exports){
 var document = require("global/document")
 
 var applyProperties = require("./apply-properties")
@@ -2609,7 +3087,7 @@ function createElement(vnode, opts) {
     return node
 }
 
-},{"../vnode/handle-thunk.js":44,"../vnode/is-vnode.js":47,"../vnode/is-vtext.js":48,"../vnode/is-widget.js":49,"./apply-properties":34,"global/document":30}],36:[function(require,module,exports){
+},{"../vnode/handle-thunk.js":45,"../vnode/is-vnode.js":48,"../vnode/is-vtext.js":49,"../vnode/is-widget.js":50,"./apply-properties":35,"global/document":31}],37:[function(require,module,exports){
 // Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
 // We don't want to read all of the DOM nodes in the tree so we use
 // the in-order tree indexing to eliminate recursion down certain branches.
@@ -2696,7 +3174,7 @@ function ascending(a, b) {
     return a > b ? 1 : -1
 }
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 var applyProperties = require("./apply-properties")
 
 var isWidget = require("../vnode/is-widget.js")
@@ -2880,7 +3358,7 @@ function replaceRoot(oldRoot, newRoot) {
     return newRoot;
 }
 
-},{"../vnode/is-widget.js":49,"../vnode/vpatch.js":52,"./apply-properties":34,"./create-element":35,"./update-widget":39}],38:[function(require,module,exports){
+},{"../vnode/is-widget.js":50,"../vnode/vpatch.js":53,"./apply-properties":35,"./create-element":36,"./update-widget":40}],39:[function(require,module,exports){
 var document = require("global/document")
 var isArray = require("x-is-array")
 
@@ -2958,7 +3436,7 @@ function patchIndices(patches) {
     return indices
 }
 
-},{"./dom-index":36,"./patch-op":37,"global/document":30,"x-is-array":32}],39:[function(require,module,exports){
+},{"./dom-index":37,"./patch-op":38,"global/document":31,"x-is-array":33}],40:[function(require,module,exports){
 var isWidget = require("../vnode/is-widget.js")
 
 module.exports = updateWidget
@@ -2975,7 +3453,7 @@ function updateWidget(a, b) {
     return false
 }
 
-},{"../vnode/is-widget.js":49}],40:[function(require,module,exports){
+},{"../vnode/is-widget.js":50}],41:[function(require,module,exports){
 'use strict';
 
 var EvStore = require('ev-store');
@@ -3004,7 +3482,7 @@ EvHook.prototype.unhook = function(node, propertyName) {
     es[propName] = undefined;
 };
 
-},{"ev-store":27}],41:[function(require,module,exports){
+},{"ev-store":28}],42:[function(require,module,exports){
 'use strict';
 
 module.exports = SoftSetHook;
@@ -3023,7 +3501,7 @@ SoftSetHook.prototype.hook = function (node, propertyName) {
     }
 };
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 'use strict';
 
 var isArray = require('x-is-array');
@@ -3163,7 +3641,7 @@ function errorString(obj) {
     }
 }
 
-},{"../vnode/is-thunk":45,"../vnode/is-vhook":46,"../vnode/is-vnode":47,"../vnode/is-vtext":48,"../vnode/is-widget":49,"../vnode/vnode.js":51,"../vnode/vtext.js":53,"./hooks/ev-hook.js":40,"./hooks/soft-set-hook.js":41,"./parse-tag.js":43,"x-is-array":32}],43:[function(require,module,exports){
+},{"../vnode/is-thunk":46,"../vnode/is-vhook":47,"../vnode/is-vnode":48,"../vnode/is-vtext":49,"../vnode/is-widget":50,"../vnode/vnode.js":52,"../vnode/vtext.js":54,"./hooks/ev-hook.js":41,"./hooks/soft-set-hook.js":42,"./parse-tag.js":44,"x-is-array":33}],44:[function(require,module,exports){
 'use strict';
 
 var split = require('browser-split');
@@ -3219,7 +3697,7 @@ function parseTag(tag, props) {
     return props.namespace ? tagName : tagName.toUpperCase();
 }
 
-},{"browser-split":26}],44:[function(require,module,exports){
+},{"browser-split":27}],45:[function(require,module,exports){
 var isVNode = require("./is-vnode")
 var isVText = require("./is-vtext")
 var isWidget = require("./is-widget")
@@ -3261,14 +3739,14 @@ function renderThunk(thunk, previous) {
     return renderedThunk
 }
 
-},{"./is-thunk":45,"./is-vnode":47,"./is-vtext":48,"./is-widget":49}],45:[function(require,module,exports){
+},{"./is-thunk":46,"./is-vnode":48,"./is-vtext":49,"./is-widget":50}],46:[function(require,module,exports){
 module.exports = isThunk
 
 function isThunk(t) {
     return t && t.type === "Thunk"
 }
 
-},{}],46:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 module.exports = isHook
 
 function isHook(hook) {
@@ -3277,7 +3755,7 @@ function isHook(hook) {
        typeof hook.unhook === "function" && !hook.hasOwnProperty("unhook"))
 }
 
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = isVirtualNode
@@ -3286,7 +3764,7 @@ function isVirtualNode(x) {
     return x && x.type === "VirtualNode" && x.version === version
 }
 
-},{"./version":50}],48:[function(require,module,exports){
+},{"./version":51}],49:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = isVirtualText
@@ -3295,17 +3773,17 @@ function isVirtualText(x) {
     return x && x.type === "VirtualText" && x.version === version
 }
 
-},{"./version":50}],49:[function(require,module,exports){
+},{"./version":51}],50:[function(require,module,exports){
 module.exports = isWidget
 
 function isWidget(w) {
     return w && w.type === "Widget"
 }
 
-},{}],50:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 module.exports = "1"
 
-},{}],51:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 var version = require("./version")
 var isVNode = require("./is-vnode")
 var isWidget = require("./is-widget")
@@ -3379,7 +3857,7 @@ function VirtualNode(tagName, properties, children, key, namespace) {
 VirtualNode.prototype.version = version
 VirtualNode.prototype.type = "VirtualNode"
 
-},{"./is-thunk":45,"./is-vhook":46,"./is-vnode":47,"./is-widget":49,"./version":50}],52:[function(require,module,exports){
+},{"./is-thunk":46,"./is-vhook":47,"./is-vnode":48,"./is-widget":50,"./version":51}],53:[function(require,module,exports){
 var version = require("./version")
 
 VirtualPatch.NONE = 0
@@ -3403,7 +3881,7 @@ function VirtualPatch(type, vNode, patch) {
 VirtualPatch.prototype.version = version
 VirtualPatch.prototype.type = "VirtualPatch"
 
-},{"./version":50}],53:[function(require,module,exports){
+},{"./version":51}],54:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = VirtualText
@@ -3415,7 +3893,7 @@ function VirtualText(text) {
 VirtualText.prototype.version = version
 VirtualText.prototype.type = "VirtualText"
 
-},{"./version":50}],54:[function(require,module,exports){
+},{"./version":51}],55:[function(require,module,exports){
 var isObject = require("is-object")
 var isHook = require("../vnode/is-vhook")
 
@@ -3475,7 +3953,7 @@ function getPrototype(value) {
   }
 }
 
-},{"../vnode/is-vhook":46,"is-object":31}],55:[function(require,module,exports){
+},{"../vnode/is-vhook":47,"is-object":32}],56:[function(require,module,exports){
 var isArray = require("x-is-array")
 
 var VPatch = require("../vnode/vpatch")
@@ -3800,6 +4278,6 @@ function appendPatch(apply, patch) {
     }
 }
 
-},{"../vnode/handle-thunk":44,"../vnode/is-thunk":45,"../vnode/is-vnode":47,"../vnode/is-vtext":48,"../vnode/is-widget":49,"../vnode/vpatch":52,"./diff-props":54,"x-is-array":32}],56:[function(require,module,exports){
+},{"../vnode/handle-thunk":45,"../vnode/is-thunk":46,"../vnode/is-vnode":48,"../vnode/is-vtext":49,"../vnode/is-widget":50,"../vnode/vpatch":53,"./diff-props":55,"x-is-array":33}],57:[function(require,module,exports){
 
 },{}]},{},[1]);
