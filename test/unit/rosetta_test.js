@@ -2,7 +2,7 @@ var Rosetta = require('../../lib/rosetta.js');
 var test = require('tape');
 require('../../lib/shims.js');
 
-test('', function (t) {
+test('register', function (t) {
     t.plan(1);
 
 

@@ -2,7 +2,7 @@ var createElementClass = require('../../lib/createElementClass.js');
 var test = require('tape');
 require('../../lib/shims.js');
 
-test('', function (t) {
+test('test newClass', function (t) {
     t.plan(1);
 
     var options = {
@@ -22,8 +22,16 @@ test('', function (t) {
         }
 
     };
+
     var newClass = createElementClass(options);
 
-    t.equal()
+    var rTest = new newClass({
+        list: [1,2,4],
+        title: 'aaaaa',
+        sdsdfs: 'lalal'
+    });
 
+    console.log(rTest);
+
+    t.equal(rTest.title, 'aaaaa');
 });

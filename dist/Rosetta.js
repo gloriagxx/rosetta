@@ -1535,7 +1535,7 @@ function render(rTreeDom, root, force) {
 
         obj.isAttached = true;
 
-        ref(obj.properties.ref, obj);
+        ref(obj.__config.ref, obj);
 
         obj.attached.call(obj);
 
