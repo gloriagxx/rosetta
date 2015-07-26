@@ -19,4 +19,4 @@ var es5shim = require('./lib/shims.js'),
 
 window.Rosetta = Rosetta;
 
-ready(Rosetta.init);
+ready(Rosetta.render);

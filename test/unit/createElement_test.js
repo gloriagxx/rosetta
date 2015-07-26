@@ -31,7 +31,5 @@ test('test newClass', function (t) {
         sdsdfs: 'lalal'
     });
 
-    console.log(rTest);
-
     t.equal(rTest.title, 'aaaaa');
 });

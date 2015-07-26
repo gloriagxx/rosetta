@@ -20,7 +20,7 @@ var es5shim = require('./lib/shims.js'),
 
 window.Rosetta = Rosetta;
 
-ready(Rosetta.init);
+ready(Rosetta.render);
 
 },{"./lib/rosetta.js":20,"./lib/shims.js":21}],2:[function(require,module,exports){
 var h = require('./virtual-dom/h'),
@@ -98,7 +98,7 @@ function triggerChildren(obj, type) {
     (obj.rosettaElems || []).map(function(item, index) {
         triggerChildren(item.rosettaElems || []);
 
-        item.trigger(type, item);
+        item.fire(type, item);
     });
 }
 
@@ -115,17 +115,17 @@ function update(options) {
         attr = {};
 
     attr = extend(this.__config, options, true);
-    var newTree = this.__t(this, attr, this.refs);
+    var newTree = this.__t(this, attr, this.$);
     var patches = diff(oldTree, newTree);
     this.root = patch(this.root, patches);
     this.vTree = newTree;
     this.__config = attr;
 
-    Rosetta.updateRefs(this, this.root);
+    updateRefs(this, this.root);
 
     this.attributeChanged.call(this);
-    Rosetta.triggerChildren(this, ATTRIBUTECHANGE);
-    this.trigger(ATTRIBUTECHANGE, this);
+    triggerChildren(this, ATTRIBUTECHANGE);
+    this.fire(ATTRIBUTECHANGE, this);
 }
 
 
@@ -141,8 +141,8 @@ function destroy() {
     this.dettached.call(this);
 
     this.isAttached = false;
-    Rosetta.triggerChildren(this, DETACHED);
-    this.trigger(DETACHED, this);
+    triggerChildren(this, DETACHED);
+    this.fire(DETACHED, this);
     delete ref(this.name);
 }
 
@@ -158,7 +158,7 @@ function create(type, attr) {
     // to update refs, something wrong here
 
     if (!!attr && !!attr.ref) {
-        this.refs[attr.ref] = obj;
+        this.$[attr.ref] = obj;
     }
 
     if (obj.realObj && obj.realObj.isRosettaElem == true) {
@@ -219,7 +219,15 @@ function createElementClass(protoOptions) {
         },
         attributeChanged: function() {
 
-        }
+        },
+        properties: {},
+
+        is: '',
+
+        __t: function(){},
+
+        __config: {}
+
     }, protoOptions, {
         update: update,
 
@@ -235,20 +243,15 @@ function createElementClass(protoOptions) {
 
         fire: trigger,
 
-        create: create,
-
-        __t: function(){},
-
-        __config: {}
+        create: create
 
     }, true);
 
     for (var key in protoOptions.properties) {
         var value = protoOptions.properties[key];
-        if (!!value.value) {
-            CustomElement.prototype.__config[key] = value.value;
-            CustomElement.prototype[key] = value.value;
-        }
+
+        CustomElement.prototype.__config[key] = value.value|| new value();
+        CustomElement.prototype[key] = value.value || new value();
     }
 
     return CustomElement;
@@ -1306,6 +1309,19 @@ var h = require('./virtual-dom/h'),
 var Delegator = require('./dom-delegator');
 var createElementClass = require('./createElementClass.js');
 
+/**
+ *
+ * @function for triggering event on children
+ * @param {object} obj - rosetta element instance
+ * @param {string} type - event name
+ */
+function triggerChildren(obj, type) {
+    (obj.rosettaElems || []).map(function(item, index) {
+        triggerChildren(item.rosettaElems || []);
+
+        item.fire(type, item);
+    });
+}
 
 
 /**
@@ -1315,20 +1331,20 @@ var createElementClass = require('./createElementClass.js');
  */
 function attributeToProperty(name, value) {
     if (name) {
-        var item = this.properties[name];
+        var item = this.properties[name] || String;
         var supportType = [Boolean, Date, Number, String, Array, Object];
         var index = supportType.indexOf(item);
         var typeFunc = supportType[index];
-        var currentValue = this[name];
+        var currentValue = this[name] || null;
 
         if (index < 0) {
             var typeFunc = item.type;
         }
 
 
-        if (!(value instanceof typeFunc)) {
+        if (!(typeof typeFunc() == typeof value)) {
             // deserialize Boolean or Number values from attribute
-            value = deserializeValue(value, typeFunc);
+            value = deserializeValue(value, typeFunc, currentValue);
         }
 
         // only act if the value has changed
@@ -1541,7 +1557,7 @@ function render(rTreeDom, root, force) {
 
         triggerChildren(obj, ATTACHED);
 
-        obj.trigger(ATTACHED, obj);
+        obj.fire(ATTACHED, obj);
 
         return obj;
     } else {
@@ -1574,6 +1590,12 @@ function create(type, attr) {
     childrenContent = toPlainArray(childrenContent);
     var rTree = '';
 
+    (childrenContent || []).map(function(item, index) {
+        if (item && item.rTree) {
+            childrenContent[index] = item.rTree;
+        }
+    });
+
     if (isOriginalTag(type)) {
         var tmp = getRealAttr(attr);
         var eventObj = tmp.eventObj;
@@ -1603,9 +1625,9 @@ function create(type, attr) {
 
         var realAttr = getRealAttr.call(elemObj, attr, true);
 
-        extend(elemObj, realAttr);
+        extend(elemObj, realAttr.attr);
 
-        rTree = elemObj.__t(elemObj, realAttr, elemObj.$);
+        rTree = elemObj.__t(elemObj, elemObj.$).rTree;
 
         rTree.properties.attributes.isrosettaelem = true;
         if (childrenContent) {
@@ -1623,7 +1645,7 @@ function create(type, attr) {
 
         elemObj.created.call(this);
 
-        elemObj.trigger(CREATED, elemObj);
+        elemObj.fire(CREATED, elemObj);
         rTree.realObj = elemObj;
 
         rTreeDom = createElement(rTree);
@@ -1695,10 +1717,11 @@ function ready(cb) {
  *
  */
 var Rosetta = function(options) {
-    var newClass = createElementClass(type, options);
+    var type = options.is;
+    var newClass = createElementClass(options);
 
     elemClass(type, newClass);
-    htmlImport.factoryMap[options.__eid] = true;
+    htmlImport.factoryMap[options.__rid] = true;
     return newClass;
 };
 
@@ -2708,7 +2731,7 @@ var plainDom = require('./plainDom.js');
      * @param {object} value - new value which will be deserialized according to the type of currentValue
      * @param {object} currentValue - old value which to determin the type of the new value in the first param
      */
-    deserializeValue = module.exports.deserializeValue = function(value, typeFunc) {
+    deserializeValue = module.exports.deserializeValue = function(value, typeFunc, currentValue) {
         // attempt to infer type from default value
         var inferredType = typeof typeFunc();
         // invent 'date' type value for Date
