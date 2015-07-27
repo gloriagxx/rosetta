@@ -251,9 +251,14 @@ function createElementClass(protoOptions) {
 
     for (var key in protoOptions.properties) {
         var value = protoOptions.properties[key];
+        var re = value.value;
 
-        CustomElement.prototype.__config[key] = value.value|| new value();
-        CustomElement.prototype[key] = value.value || new value();
+        if (re == undefined) {
+            re = new value();
+        }
+
+        CustomElement.prototype.__config[key] = re;
+        CustomElement.prototype[key] = re;
     }
 
     return CustomElement;
