@@ -109,17 +109,18 @@ function triggerChildren(obj, type) {
  */
 
 function update(options) {
-    var oldTree = this.vTree,
+    var oldTree = this.rTree,
         root = this.root,
         type = this.type,
         attr = {};
 
     attr = extend(this.__config, options, true);
-    var newTree = this.__t(this, attr, this.$);
+    extend(this, attr, true);
+
+    var newTree = this.__t(this, this.$).rTree;
     var patches = diff(oldTree, newTree);
     this.root = patch(this.root, patches);
     this.vTree = newTree;
-    this.__config = attr;
 
     updateRefs(this, this.root);
 
@@ -228,7 +229,9 @@ function createElementClass(protoOptions) {
 
         __t: function(){},
 
-        __config: {}
+        __config: {},
+
+        eventDelegator: {}
 
     }, protoOptions, {
         update: update,
@@ -646,6 +649,8 @@ var createElement = require('./virtual-dom/create-element');
 
 var createElementClass = require('./createElementClass.js');
 
+var eventDelegatorObj = {};
+
 /**
  *
  * @function for triggering event on children
@@ -711,8 +716,10 @@ function getRealAttr(attr, toRealType) {
         }
 
         if (supportEvent[i]) {
-            eventObj['ev-' + supportEvent[i]] = item;
+            eventObj[supportEvent[i]] = item;
             delete attr[i];
+            attr['data-' + supportEvent[i]] = item;
+            eventDelegatorObj[supportEvent[i]] = true;
         }
     }
 
@@ -818,6 +825,37 @@ function getParent(dom) {
     }
 }
 
+function eventDelegate(root, eventDelegatorObj) {
+    var self = this;
+
+    for (var type in eventDelegatorObj) {
+        (function(eventName) {
+            root.addEventListener(eventName, function(e) {
+                var parent = e.target;
+
+                function findCB(parent) {
+                    if (parent == root || !parent) {
+                        return;
+                    }
+
+                    var cb = parent.getAttribute('data-' + eventName);
+
+                    if (!!cb) {
+                        cb = eval('(function(){ return ' + cb + '})()');
+                        cb.call(self, e);
+                    } else {
+                        parent = parent.parentElement;
+                        findCB(parent);
+                    }
+                }
+
+                findCB(parent);
+
+            }, false);
+        })(type);
+    }
+}
+
 /**
  *
  * @function to render
@@ -889,6 +927,9 @@ function render(rTreeDom, root, force) {
 
         ref(obj.__config.ref, obj);
 
+        eventDelegate.call(obj, dom, eventDelegatorObj);
+        eventDelegatorObj = {};
+
         obj.attached.call(obj);
 
         triggerChildren(obj, ATTACHED);
@@ -896,7 +937,12 @@ function render(rTreeDom, root, force) {
         obj.fire(ATTACHED, obj);
 
         return obj;
+
     } else {
+
+        eventDelegate.call(window, document, eventDelegatorObj);
+        eventDelegatorObj = {};
+
         appendRoot(dom, root, force);
     }
 
@@ -937,12 +983,12 @@ function create(type, attr) {
         var eventObj = tmp.eventObj;
         attr = tmp.attr;
 
+
         var newAttrs = extend({
             attributes: attr
         }, eventObj, true);
 
         rTree = h.call(this, type, newAttrs, childrenContent);
-
         rTreeDom = createElement(rTree);
         rTreeDom.rTree = rTree;
 
