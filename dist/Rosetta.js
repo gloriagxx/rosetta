@@ -117,7 +117,7 @@ function update(options) {
     attr = extend(this.__config, options, true);
     extend(this, attr, true);
 
-    var newTree = this.__t(this, this.$).rTree;
+    var newTree = this.__t(this, this.$);
     var patches = diff(oldTree, newTree);
 
     this.root = patch(this.root, patches);
@@ -159,7 +159,7 @@ function create(type, attr) {
     var obj = Rosetta.create.apply(Rosetta, arguments);
     // to update refs, something wrong here
 
-    var rTree = obj.rTree;
+    var rTree = obj;//obj.rTree;
 
     if (!!attr && !!attr.ref) {
         this.$[attr.ref] = rTree;
@@ -861,13 +861,12 @@ function eventDelegate(root, eventDelegatorObj) {
  *
  */
 
-function render(rTreeDom, root, force) {
-    if (!rTreeDom) {
+function render(rTree, root, force) {
+    if (!rTree) {
         init();
         return;
     }
 
-    rTree = rTreeDom.rTree;
     if (isString(root)) {
         root = query(root)[0];
     }
@@ -988,10 +987,10 @@ function create(type, attr) {
         }, eventObj, true);
 
         rTree = h.call(this, type, newAttrs, childrenContent);
-        rTreeDom = createElement(rTree);
-        rTreeDom.rTree = rTree;
+        // rTreeDom = createElement(rTree);
+        // rTreeDom.rTree = rTree;
 
-        return rTreeDom;
+        return rTree;
     } else {
         var NewClass = elemClass(type),
             elemObj = null;
@@ -1008,7 +1007,7 @@ function create(type, attr) {
 
         extend(elemObj, realAttr.attr);
 
-        rTree = elemObj.__t(elemObj, elemObj.$).rTree;
+        rTree = elemObj.__t(elemObj, elemObj.$);
 
         rTree.properties.attributes.isrosettaelem = true;
         if (childrenContent) {
@@ -1029,10 +1028,10 @@ function create(type, attr) {
         elemObj.fire(CREATED, elemObj);
         rTree.realObj = elemObj;
 
-        rTreeDom = createElement(rTree);
-        rTreeDom.rTree = rTree;
+        // rTreeDom = createElement(rTree);
+        // rTreeDom.rTree = rTree;
 
-        return rTreeDom;
+        return rTree;
     }
 }
 
