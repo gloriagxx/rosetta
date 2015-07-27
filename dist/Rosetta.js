@@ -35,6 +35,8 @@ var utils = require('./utils.js'),
     isDomNode = utils.isDomNode,
     updateRefs = utils.updateRefs,
 
+    triggerChildren = utils.triggerChildren,
+
     lifeEvents = require('./lifeEvents.js'),
     ATTACHED = lifeEvents.ATTACHED,
     DETACHED = lifeEvents.DETACHED,
@@ -88,19 +90,6 @@ function once(type, listener, context) {
     this.on(type, listener, context, true);
 }
 
-/**
- *
- * @function for triggering event on children
- * @param {object} obj - rosetta element instance
- * @param {string} type - event name
- */
-function triggerChildren(obj, type) {
-    (obj.rosettaElems || []).map(function(item, index) {
-        triggerChildren(item.rosettaElems || []);
-
-        item.fire(type, item);
-    });
-}
 
 /**
  *
@@ -145,7 +134,7 @@ function destroy() {
     this.isAttached = false;
     triggerChildren(this, DETACHED);
     this.fire(DETACHED, this);
-    delete ref(this.name);
+    delete Rosetta.ref(this.name);
 }
 
 
@@ -633,10 +622,12 @@ var supportEvent = require('./supportEvent.js'),
     deserializeValue = utils.deserializeValue,
     typeHandlers = utils.typeHandlers,
     updateRefs = utils.updateRefs,
+    triggerChildren = utils.triggerChildren,
+
 
     htmlImport = require('./htmlImport.js'),
-
     lifeEvents = require('./lifeEvents.js'),
+
     ATTACHED = lifeEvents.ATTACHED,
     DETACHED = lifeEvents.DETACHED,
     CREATED = lifeEvents.CREATED,
@@ -653,19 +644,6 @@ var createElementClass = require('./createElementClass.js');
 var eventDelegatorObj = {};
 
 var EvStore = require("./virtual-dom/node_modules/ev-store")
-/**
- *
- * @function for triggering event on children
- * @param {object} obj - rosetta element instance
- * @param {string} type - event name
- */
-function triggerChildren(obj, type) {
-    (obj.rosettaElems || []).map(function(item, index) {
-        triggerChildren(item.rosettaElems || []);
-
-        item.fire(type, item);
-    });
-}
 
 
 /**
@@ -2168,7 +2146,21 @@ var plainDom = require('./plainDom.js');
             var node = query('[ref="' + key + '"]', dom);
             obj.$[key] = node;
         }
-    };
+    },
+
+    /**
+     *
+     * @function for triggering event on children
+     * @param {object} obj - rosetta element instance
+     * @param {string} type - event name
+     */
+    triggerChildren = module.exports.triggerChildren = function (obj, type) {
+        (obj.rosettaElems || []).map(function(item, index) {
+            triggerChildren(item.rosettaElems || []);
+
+            item.fire(type, item);
+        });
+    }
 
 },{"./plainDom.js":5}],10:[function(require,module,exports){
 var createElement = require("./vdom/create-element.js")
