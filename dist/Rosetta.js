@@ -843,7 +843,7 @@ function eventDelegate(root, eventDelegatorObj) {
                     if (!!cb) {
                         cb.call(self, e);
                     } else {
-                        parent = parent.parentNode;
+                        parent = parent.parentElement;
                         findCB(parent);
                     }
                 }
@@ -970,12 +970,6 @@ function create(type, attr) {
     childrenContent = toPlainArray(childrenContent);
     var rTree = '';
 
-    (childrenContent || []).map(function(item, index) {
-        if (item && item.rTree) {
-            childrenContent[index] = item.rTree;
-        }
-    });
-
     if (isOriginalTag(type)) {
         var tmp = getRealAttr(attr);
         var eventObj = tmp.eventObj;
@@ -987,8 +981,6 @@ function create(type, attr) {
         }, eventObj, true);
 
         rTree = h.call(this, type, newAttrs, childrenContent);
-        // rTreeDom = createElement(rTree);
-        // rTreeDom.rTree = rTree;
 
         return rTree;
     } else {
