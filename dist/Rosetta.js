@@ -839,22 +839,11 @@ function eventDelegate(root, eventDelegatorObj) {
                         return;
                     }
 
-                    // var cb = parent.getAttribute('data-' + eventName);
-
-                    // if (!!cb) {
-                    //     cb = eval('(function(){ return ' + cb + '})()');
-                    //     cb.call(self, e);
-                    // } else {
-                    //     parent = parent.parentElement;
-                    //     findCB(parent);
-                    // }
-
                     var cb = EvStore(parent)[eventName];
                     if (!!cb) {
-                        // cb = eval('(function(){ return ' + cb + '})()');
                         cb.call(self, e);
                     } else {
-                        parent = parent.parentElement;
+                        parent = parent.parentNode;
                         findCB(parent);
                     }
                 }
