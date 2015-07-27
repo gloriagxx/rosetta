@@ -116,11 +116,9 @@ function update(options) {
 
     attr = extend(this.__config, options, true);
     extend(this, attr, true);
-    console.log(attr);
 
     var newTree = this.__t(this, this.$).rTree;
     var patches = diff(oldTree, newTree);
-    console.log(patches);
 
     this.root = patch(this.root, patches);
     this.rTree = newTree;
@@ -613,7 +611,7 @@ var plainDom = {
 module.exports = plainDom;
 },{}],6:[function(require,module,exports){
 /*@require ./rosetta.css*/
-/** Rosetta v1.0.1**/
+/** Rosetta v1.0.2**/
 
 var _refers = {},
     _elemClass = {},
