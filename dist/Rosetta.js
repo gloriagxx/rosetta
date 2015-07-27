@@ -652,6 +652,7 @@ var createElementClass = require('./createElementClass.js');
 
 var eventDelegatorObj = {};
 
+var EvStore = require("./virtual-dom/node_modules/ev-store")
 /**
  *
  * @function for triggering event on children
@@ -717,9 +718,8 @@ function getRealAttr(attr, toRealType) {
         }
 
         if (supportEvent[i]) {
-            eventObj[supportEvent[i]] = item;
+            eventObj['ev-' + supportEvent[i]] = item;
             delete attr[i];
-            attr['data-' + supportEvent[i]] = item;
             eventDelegatorObj[supportEvent[i]] = true;
         }
     }
@@ -839,10 +839,19 @@ function eventDelegate(root, eventDelegatorObj) {
                         return;
                     }
 
-                    var cb = parent.getAttribute('data-' + eventName);
+                    // var cb = parent.getAttribute('data-' + eventName);
 
+                    // if (!!cb) {
+                    //     cb = eval('(function(){ return ' + cb + '})()');
+                    //     cb.call(self, e);
+                    // } else {
+                    //     parent = parent.parentElement;
+                    //     findCB(parent);
+                    // }
+
+                    var cb = EvStore(parent)[eventName];
                     if (!!cb) {
-                        cb = eval('(function(){ return ' + cb + '})()');
+                        // cb = eval('(function(){ return ' + cb + '})()');
                         cb.call(self, e);
                     } else {
                         parent = parent.parentElement;
@@ -1110,7 +1119,7 @@ extend(Rosetta, {
 
 
 module.exports = Rosetta;
-},{"./createElementClass.js":2,"./htmlImport.js":3,"./lifeEvents.js":4,"./supportEvent.js":8,"./utils.js":9,"./virtual-dom/create-element":10,"./virtual-dom/h":12}],7:[function(require,module,exports){
+},{"./createElementClass.js":2,"./htmlImport.js":3,"./lifeEvents.js":4,"./supportEvent.js":8,"./utils.js":9,"./virtual-dom/create-element":10,"./virtual-dom/h":12,"./virtual-dom/node_modules/ev-store":14}],7:[function(require,module,exports){
 /*!
  * https://github.com/es-shims/es5-shim
  * @license es5-shim Copyright 2009-2015 by contributors, MIT License
