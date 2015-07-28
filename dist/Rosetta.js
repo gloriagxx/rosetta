@@ -394,6 +394,8 @@ function htmlImport (urls, onload, onerror) {
     var needMap = {};
     var needNum = 0;
 
+    onerror = onerror || function() {};
+
     function findNeed (depArr) {
         for (var i = 0, n = depArr.length; i < n; i++) {
             var dep = alias(depArr[i]);
@@ -451,6 +453,7 @@ function loadScript (id, callback, onerror) {
 }
 
 htmlImport.factoryMap = factoryMap;
+htmlImport.resourceMap = resourceMap;
 
 module.exports = htmlImport;
 },{}],4:[function(require,module,exports){
@@ -1072,7 +1075,9 @@ extend(Rosetta, {
 
     'ready': ready,
 
-    'import': htmlImport
+    'import': htmlImport,
+
+    'config': htmlImport.resourceMap
 });
 
 
