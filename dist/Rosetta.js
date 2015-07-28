@@ -337,7 +337,7 @@ function alias (url) {
 }
 
 
-function createScript (url, onerror) {
+function createScript (url, id, onerror) {
     if (url in scriptsMap) return;
 
 
@@ -355,7 +355,8 @@ function createScript (url, onerror) {
 
         function onload() {
             clearTimeout(tid);
-            var queue = loadingMap[alias(url)];
+            var queue = loadingMap[alias(id)];
+
             if (queue) {
                 for (var i = 0, n = queue.length; i < n; i++) {
                     queue[i]();
@@ -414,6 +415,7 @@ function htmlImport (urls, onload, onerror) {
 
             needMap[dep] = true;
             needNum++;
+
             loadScript(dep, updateNeed, onerror);
         }
     }
@@ -447,7 +449,7 @@ function loadScript (id, callback, onerror) {
         url = res.url || id;
     }
 
-    createScript(url, onerror && function() {
+    createScript(url, id, onerror && function() {
         onerror(id);
     });
 }
