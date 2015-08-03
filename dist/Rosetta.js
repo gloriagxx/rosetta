@@ -381,6 +381,37 @@ function createScript (url, id, onerror) {
     return script;
 }
 
+function createCSS (url, id, onerror) {
+    if (url in scriptsMap) return;
+
+
+    scriptsMap[url] = true;
+
+    var link = document.createElement('link');
+
+    if (onerror) {
+        var tid = setTimeout(onerror, timeout);
+
+        function onload() {
+            clearTimeout(tid);
+            var queue = loadingMap[alias(id)];
+
+            if (queue) {
+                for (var i = 0, n = queue.length; i < n; i++) {
+                    queue[i]();
+                }
+                delete loadingMap[url];
+            }
+        }
+
+        var link = document.createElement('link');
+        link.href = url;
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        head.appendChild(link);
+        onload();
+    }
+}
 /**
  *
  * @module htmlImport
@@ -442,16 +473,25 @@ function loadScript (id, callback, onerror) {
     var res = resMap[id] || resMap[id + '.js'] || {};
     var pkg = res.pkg;
     var url;
+    var type = '';
 
     if (pkg) {
         url = pkgMap[pkg].url;
+        type = pkgMap[pkg].type;
     } else {
         url = res.url || id;
+        type = res.type;
     }
 
-    createScript(url, id, onerror && function() {
-        onerror(id);
-    });
+    if (type == 'js') {
+        createScript(url, id, onerror && function() {
+            onerror(id);
+        });
+    } else if (type == 'css') {
+        createCSS(url, id, onerror && function() {
+            onerror(id);
+        });
+    }
 }
 
 htmlImport.factoryMap = factoryMap;
