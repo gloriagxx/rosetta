@@ -1,6 +1,7 @@
 language: node_js
 node_js:
 - '0.11'
+sudo: required
 
 addons:
   sauce_connect: true
@@ -11,7 +12,6 @@ before_script:
 - npm install
 script: npm run test
 
-sudo: required
 
 env:
   global:
