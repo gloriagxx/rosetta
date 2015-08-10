@@ -1,7 +1,6 @@
 ui: tape
 concurrency: 1
 browsers:
-  - name: iphone
-    version: latest
 
-
+  - name: internet explorer
+    version: 9..latest
