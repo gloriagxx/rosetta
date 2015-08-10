@@ -10,7 +10,7 @@ before_install:
 - npm install -g zuul
 before_script:
 - npm install
-script: npm run test
+script: npm run-script travis-test
 
 
 env:
