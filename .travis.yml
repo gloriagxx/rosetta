@@ -11,6 +11,7 @@ before_script:
 - npm install
 script: npm run test
 
+sudo: required
 
 env:
   global:
