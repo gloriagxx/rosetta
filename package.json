@@ -42,7 +42,7 @@
         "tap-dot": "^1.0.0",
         "tap-spec": "^3.0.0",
         "tape": "^4.0.0",
-        "zuul": "^2.1.1"
+        "zuul": "3.0.0"
     },
     "testling": {
         "files": "test/*.js",
