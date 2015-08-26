@@ -415,7 +415,7 @@ function createCSS (url, id, onerror) {
 /**
  *
  * @module htmlImport
- * @param {array} urls -
+ * @param {array} urls - Array of resources to be loaded
  *
  */
 function htmlImport (urls, onload, onerror) {
@@ -2205,11 +2205,12 @@ var plainDom = require('./plainDom.js');
      */
     triggerChildren = module.exports.triggerChildren = function (obj, type) {
         (obj.rosettaElems || []).map(function(item, index) {
-            triggerChildren(item.rosettaElems || []);
+            triggerChildren(item);
 
+            item.attached.call(item);
             item.fire(type, item);
         });
-    }
+    };
 
 },{"./plainDom.js":5}],10:[function(require,module,exports){
 var createElement = require("./vdom/create-element.js")
