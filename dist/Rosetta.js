@@ -1040,7 +1040,7 @@ function create(type, attr) {
 
         elemObj.rTree = rTree;
 
-        elemObj.created.call(this);
+        elemObj.created.call(elemObj);
 
         elemObj.fire(CREATED, elemObj);
         rTree.realObj = elemObj;
