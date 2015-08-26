@@ -2204,10 +2204,9 @@ var plainDom = require('./plainDom.js');
      * @param {string} type - event name
      */
     triggerChildren = module.exports.triggerChildren = function (obj, type) {
-        (obj.rosettaElems || []).map(function(item, index) {
-            triggerChildren(item);
-
-            item.attached.call(item);
+        (obj.rosettaElems || []).map(function (item, index) {
+            triggerChildren(item, type);
+            item[type].call(item);
             item.fire(type, item);
         });
     };
