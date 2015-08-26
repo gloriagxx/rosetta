@@ -503,7 +503,7 @@ module.exports.ATTACHED = 'attached';
 module.exports.DETACHED = 'detached';
 module.exports.CREATED = 'created';
 module.exports.READY = 'ready';
-module.exports.ATTRIBUTECHANGE = 'attributeChange';
+module.exports.ATTRIBUTECHANGE = 'attributeChanged';
 },{}],5:[function(require,module,exports){
 var plainDom = {
     content: 'content',
