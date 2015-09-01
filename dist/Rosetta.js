@@ -192,67 +192,50 @@ function createElementClass(protoOptions) {
 
             events: {},
 
+            __config: {},
+
             isAttached: false
 
+
         }, options || {}, true);
+        for (var key in this.properties) {
+            var value = this.properties[key];
+            var re = value.value;
+
+            if (re == undefined) {
+                re = new value();
+            }
+
+            this.__config[key] = re;
+            this[key] = re;
+        }
     }
-
     extend(CustomElement.prototype, {
-        ready: function() {
-
+        ready: function () {
         },
-        created: function() {
-
+        created: function () {
         },
-        attached: function() {
-
+        attached: function () {
         },
-        dettached: function() {
-
+        dettached: function () {
         },
-        attributeChanged: function() {
-
+        attributeChanged: function () {
         },
-        properties: {},
 
         is: '',
-
-        __t: function(){},
-
-        __config: {},
-
+        __t: function () {
+        },
         eventDelegator: {}
-
     }, protoOptions, {
         update: update,
-
         destroy: destroy,
-
         isRosettaElem: true,
-
         on: on,
-
         once: once,
-
         off: off,
-
         fire: trigger,
-
         create: create
-
     }, true);
-
-    for (var key in protoOptions.properties) {
-        var value = protoOptions.properties[key];
-        var re = value.value;
-
-        if (re == undefined) {
-            re = new value();
-        }
-
-        CustomElement.prototype.__config[key] = re;
-        CustomElement.prototype[key] = re;
-    }
 
     return CustomElement;
 }
