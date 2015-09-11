@@ -194,10 +194,11 @@ function createElementClass(protoOptions) {
 
             __config: {},
 
+
             isAttached: false
 
-
         }, options || {}, true);
+
         for (var key in this.properties) {
             var value = this.properties[key];
             var re = value.value;
@@ -211,6 +212,7 @@ function createElementClass(protoOptions) {
         }
     }
     extend(CustomElement.prototype, {
+        is: '',
         ready: function () {
         },
         created: function () {
@@ -221,8 +223,7 @@ function createElementClass(protoOptions) {
         },
         attributeChanged: function () {
         },
-
-        is: '',
+        properties: {},
         __t: function () {
         },
         eventDelegator: {}
