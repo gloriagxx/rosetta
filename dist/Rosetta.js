@@ -114,6 +114,9 @@ function update(options) {
 
     updateRefs(this, this.root);
 
+    Rosetta.eventDelegate.call(this.rTree.realObj, this.root, Rosetta._eventDelegatorObj);
+    Rosetta._eventDelegatorObj = {};
+
     this.attributeChanged.call(this);
     triggerChildren(this, ATTRIBUTECHANGE);
     this.fire(ATTRIBUTECHANGE, this);
@@ -670,7 +673,7 @@ var createElement = require('./virtual-dom/create-element');
 
 var createElementClass = require('./createElementClass.js');
 
-var eventDelegatorObj = {};
+var _eventDelegatorObj = {};
 
 var EvStore = require("./virtual-dom/node_modules/ev-store")
 
@@ -727,7 +730,7 @@ function getRealAttr(attr, toRealType) {
         if (supportEvent[i]) {
             eventObj['ev-' + supportEvent[i]] = item;
             delete attr[i];
-            eventDelegatorObj[supportEvent[i]] = true;
+            Rosetta._eventDelegatorObj[supportEvent[i]] = true;
         }
     }
 
@@ -840,26 +843,32 @@ function eventDelegate(root, eventDelegatorObj) {
 
     for (var type in eventDelegatorObj) {
         (function(eventName) {
-            root.addEventListener(eventName, function(e) {
-                var parent = e.target;
+            root.bindedEvent = root.bindedEvent || {};
 
-                function findCB(parent) {
-                    if (parent == root || !parent) {
-                        return;
+            if (root.bindedEvent.eventName !== true) {
+                root.addEventListener(eventName, function(e) {
+                    var parent = e.target;
+
+                    function findCB(parent) {
+                        if (parent == root || !parent) {
+                            return;
+                        }
+
+                        var cb = EvStore(parent)[eventName];
+                        if (!!cb) {
+                            cb.call(self, e);
+                        } else {
+                            parent = parent.parentElement;
+                            findCB(parent);
+                        }
                     }
 
-                    var cb = EvStore(parent)[eventName];
-                    if (!!cb) {
-                        cb.call(self, e);
-                    } else {
-                        parent = parent.parentElement;
-                        findCB(parent);
-                    }
-                }
+                    findCB(parent);
 
-                findCB(parent);
+                }, false);
+                root.bindedEvent.eventName = true;
+            }
 
-            }, false);
         })(type);
     }
 }
@@ -934,8 +943,8 @@ function render(rTree, root, force) {
 
         ref(obj.__config.ref, obj);
 
-        eventDelegate.call(obj, dom, eventDelegatorObj);
-        eventDelegatorObj = {};
+        eventDelegate.call(obj, dom, Rosetta._eventDelegatorObj);
+        Rosetta._eventDelegatorObj = {};
 
         obj.attached.call(obj);
 
@@ -947,8 +956,8 @@ function render(rTree, root, force) {
 
     } else {
 
-        eventDelegate.call(window, document, eventDelegatorObj);
-        eventDelegatorObj = {};
+        eventDelegate.call(window, document, Rosetta._eventDelegatorObj);
+        Rosetta._eventDelegatorObj = {};
 
         appendRoot(dom, root, force);
     }
@@ -1105,7 +1114,11 @@ extend(Rosetta, {
 
     'import': htmlImport,
 
-    'config': htmlImport.resourceMap
+    'config': htmlImport.resourceMap,
+
+    '_eventDelegatorObj': _eventDelegatorObj,
+
+    'eventDelegate': eventDelegate
 });
 
 
