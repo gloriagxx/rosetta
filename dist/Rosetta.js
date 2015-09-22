@@ -45,8 +45,8 @@ var utils = require('./utils.js'),
 
 
 var supportEvent = require('./supportEvent.js'),
-    utils = require('./utils.js'),
-    isString = utils.isString;
+    isString = utils.isString,
+    isFunction = utils.isFunction;
 
 /**
  * @function for event binding
@@ -202,6 +202,8 @@ function createElementClass(protoOptions) {
 
         }, options || {}, true);
 
+        var self = this;
+
         for (var key in this.properties) {
             var value = this.properties[key];
             var re = value.value;
@@ -212,6 +214,18 @@ function createElementClass(protoOptions) {
 
             this.__config[key] = re;
             this[key] = re;
+
+            (function() {
+                if (isFunction(re)) {
+                    re.bind = function (context) {
+                        var params = arguments[1];
+
+                        return function() {
+                            re.apply(context, params);
+                        }
+                    };
+                }
+            })();
         }
     }
     extend(CustomElement.prototype, {
@@ -705,6 +719,18 @@ function attributeToProperty(name, value) {
         if (value !== currentValue) {
             this[name] = value;
             this.__config[name] = value;
+
+            (function() {
+                if (isFunction(value)) {
+                    value.bind = function (context) {
+                        var params = arguments[1];
+
+                        return function() {
+                            re.apply(context, params);
+                        }
+                    };
+                }
+            })();
         }
 
         return value;
@@ -845,10 +871,9 @@ function eventDelegate(root, eventDelegatorObj) {
         (function(eventName) {
             root.bindedEvent = root.bindedEvent || {};
 
-            if (root.bindedEvent.eventName !== true) {
+            if (root.bindedEvent[eventName] !== true) {
                 root.addEventListener(eventName, function(e) {
                     var parent = e.target;
-
                     function findCB(parent) {
                         if (parent == root || !parent) {
                             return;
@@ -856,10 +881,7 @@ function eventDelegate(root, eventDelegatorObj) {
 
                         var cb = EvStore(parent)[eventName];
                         if (!!cb) {
-                            var newEvent = extend({}, e);
-                            newEvent.currentTarget = parent;
-                            newEvent.constructor = e.constructor;
-                            cb.call(self, newEvent);
+                            cb.call(self, e);
                         } else {
                             parent = parent.parentElement;
                             findCB(parent);
@@ -869,12 +891,13 @@ function eventDelegate(root, eventDelegatorObj) {
                     findCB(parent);
 
                 }, false);
-                root.bindedEvent.eventName = true;
+                root.bindedEvent[eventName] = true;
             }
 
         })(type);
     }
 }
+
 
 /**
  *
@@ -1841,8 +1864,8 @@ var supportEvent = {
     onDragStart: 'dragstart',
     onDrop: 'drop',
     onMouseDown: 'mousedown',
-    onMouseEnter: 'mouseenter',
-    onMouseLeave: 'mouseleave',
+    onMouseEnter: 'mouseover',
+    onMouseLeave: 'mouseout',
     onMouseMove: 'mousemove',
     onMouseOut: 'mouseout',
     onMouseOver: 'mouseover',
