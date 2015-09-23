@@ -45,8 +45,8 @@ var utils = require('./utils.js'),
 
 
 var supportEvent = require('./supportEvent.js'),
-    utils = require('./utils.js'),
-    isString = utils.isString;
+    isString = utils.isString,
+    isFunction = utils.isFunction;
 
 /**
  * @function for event binding
@@ -101,18 +101,35 @@ function update(options) {
     var oldTree = this.rTree,
         root = this.root,
         type = this.type,
-        attr = {};
+        attr = {},
+        flag = false;
+
+    for (var i in options) {
+        if (this.__config[i] != options[i]) {
+            flag = true;
+        }
+    }
+
+    if (!flag) {
+        return;
+    }
 
     attr = extend(this.__config, options, true);
     extend(this, attr, true);
 
     var newTree = this.__t(this, this.$);
+    newTree.properties.attributes.isRosettaElem = oldTree.properties.attributes.isRosettaElem;
+    newTree.properties.attributes.shouldReplacedContent = oldTree.properties.attributes.shouldReplacedContent;
+
     var patches = diff(oldTree, newTree);
 
     this.root = patch(this.root, patches);
     this.rTree = newTree;
 
     updateRefs(this, this.root);
+
+    Rosetta.eventDelegate.call(this.rTree.realObj, this.root, Rosetta._eventDelegatorObj);
+    Rosetta._eventDelegatorObj = {};
 
     this.attributeChanged.call(this);
     triggerChildren(this, ATTRIBUTECHANGE);
@@ -194,10 +211,13 @@ function createElementClass(protoOptions) {
 
             __config: {},
 
+
             isAttached: false
 
-
         }, options || {}, true);
+
+        var self = this;
+
         for (var key in this.properties) {
             var value = this.properties[key];
             var re = value.value;
@@ -211,6 +231,7 @@ function createElementClass(protoOptions) {
         }
     }
     extend(CustomElement.prototype, {
+        is: '',
         ready: function () {
         },
         created: function () {
@@ -221,8 +242,7 @@ function createElementClass(protoOptions) {
         },
         attributeChanged: function () {
         },
-
-        is: '',
+        properties: {},
         __t: function () {
         },
         eventDelegator: {}
@@ -669,7 +689,7 @@ var createElement = require('./virtual-dom/create-element');
 
 var createElementClass = require('./createElementClass.js');
 
-var eventDelegatorObj = {};
+var _eventDelegatorObj = {};
 
 var EvStore = require("./virtual-dom/node_modules/ev-store")
 
@@ -699,8 +719,8 @@ function attributeToProperty(name, value) {
 
         // only act if the value has changed
         if (value !== currentValue) {
-            this[name] = value;
             this.__config[name] = value;
+            this[name] = value;
         }
 
         return value;
@@ -726,7 +746,7 @@ function getRealAttr(attr, toRealType) {
         if (supportEvent[i]) {
             eventObj['ev-' + supportEvent[i]] = item;
             delete attr[i];
-            eventDelegatorObj[supportEvent[i]] = true;
+            Rosetta._eventDelegatorObj[supportEvent[i]] = true;
         }
     }
 
@@ -827,7 +847,7 @@ function getParent(dom) {
         return ;
     }
 
-    if (parent.getAttribute('isrosettaelem') == 'true') {
+    if (parent.getAttribute('isRosettaElem') == 'true') {
         return parent;
     } else {
         return getParent(parent);
@@ -839,29 +859,35 @@ function eventDelegate(root, eventDelegatorObj) {
 
     for (var type in eventDelegatorObj) {
         (function(eventName) {
-            root.addEventListener(eventName, function(e) {
-                var parent = e.target;
+            root.bindedEvent = root.bindedEvent || {};
 
-                function findCB(parent) {
-                    if (parent == root || !parent) {
-                        return;
+            if (root.bindedEvent[eventName] !== true) {
+                root.addEventListener(eventName, function(e) {
+                    var parent = e.target;
+                    function findCB(parent) {
+                        if (parent == root || !parent) {
+                            return;
+                        }
+
+                        var cb = EvStore(parent)[eventName];
+                        if (!!cb) {
+                            cb.call(self, e);
+                        } else {
+                            parent = parent.parentElement;
+                            findCB(parent);
+                        }
                     }
 
-                    var cb = EvStore(parent)[eventName];
-                    if (!!cb) {
-                        cb.call(self, e);
-                    } else {
-                        parent = parent.parentElement;
-                        findCB(parent);
-                    }
-                }
+                    findCB(parent);
 
-                findCB(parent);
+                }, false);
+                root.bindedEvent[eventName] = true;
+            }
 
-            }, false);
         })(type);
     }
 }
+
 
 /**
  *
@@ -933,8 +959,8 @@ function render(rTree, root, force) {
 
         ref(obj.__config.ref, obj);
 
-        eventDelegate.call(obj, dom, eventDelegatorObj);
-        eventDelegatorObj = {};
+        eventDelegate.call(obj, dom, Rosetta._eventDelegatorObj);
+        Rosetta._eventDelegatorObj = {};
 
         obj.attached.call(obj);
 
@@ -946,8 +972,8 @@ function render(rTree, root, force) {
 
     } else {
 
-        eventDelegate.call(window, document, eventDelegatorObj);
-        eventDelegatorObj = {};
+        eventDelegate.call(window, document, Rosetta._eventDelegatorObj);
+        Rosetta._eventDelegatorObj = {};
 
         appendRoot(dom, root, force);
     }
@@ -1009,7 +1035,7 @@ function create(type, attr) {
 
         rTree = elemObj.__t(elemObj, elemObj.$);
 
-        rTree.properties.attributes.isrosettaelem = true;
+        rTree.properties.attributes.isRosettaElem = true;
         if (childrenContent) {
             childrenContent.map(function(item, index) {
                 if (!item.nodeType) {
@@ -1104,7 +1130,11 @@ extend(Rosetta, {
 
     'import': htmlImport,
 
-    'config': htmlImport.resourceMap
+    'config': htmlImport.resourceMap,
+
+    '_eventDelegatorObj': _eventDelegatorObj,
+
+    'eventDelegate': eventDelegate
 });
 
 
@@ -1824,8 +1854,8 @@ var supportEvent = {
     onDragStart: 'dragstart',
     onDrop: 'drop',
     onMouseDown: 'mousedown',
-    onMouseEnter: 'mouseenter',
-    onMouseLeave: 'mouseleave',
+    onMouseEnter: 'mouseover',
+    onMouseLeave: 'mouseout',
     onMouseMove: 'mousemove',
     onMouseOut: 'mouseout',
     onMouseOver: 'mouseover',
