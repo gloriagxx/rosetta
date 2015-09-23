@@ -107,6 +107,9 @@ function update(options) {
     extend(this, attr, true);
 
     var newTree = this.__t(this, this.$);
+    newTree.properties.attributes.isRosettaElem = oldTree.properties.attributes.isRosettaElem;
+    newTree.properties.attributes.shouldReplacedContent = oldTree.properties.attributes.shouldReplacedContent;
+
     var patches = diff(oldTree, newTree);
 
     this.root = patch(this.root, patches);
@@ -213,8 +216,6 @@ function createElementClass(protoOptions) {
             }
 
             this.__config[key] = re;
-            this[key] = re;
-
             (function() {
                 if (isFunction(re)) {
                     re.bind = function (context) {
@@ -226,6 +227,7 @@ function createElementClass(protoOptions) {
                     };
                 }
             })();
+            this[key] = re;
         }
     }
     extend(CustomElement.prototype, {
@@ -717,20 +719,19 @@ function attributeToProperty(name, value) {
 
         // only act if the value has changed
         if (value !== currentValue) {
-            this[name] = value;
             this.__config[name] = value;
-
             (function() {
                 if (isFunction(value)) {
                     value.bind = function (context) {
                         var params = arguments[1];
 
                         return function() {
-                            re.apply(context, params);
+                            value.apply(context, params);
                         }
                     };
                 }
             })();
+            this[name] = value;
         }
 
         return value;
@@ -857,7 +858,7 @@ function getParent(dom) {
         return ;
     }
 
-    if (parent.getAttribute('isrosettaelem') == 'true') {
+    if (parent.getAttribute('isRosettaElem') == 'true') {
         return parent;
     } else {
         return getParent(parent);
@@ -1045,7 +1046,7 @@ function create(type, attr) {
 
         rTree = elemObj.__t(elemObj, elemObj.$);
 
-        rTree.properties.attributes.isrosettaelem = true;
+        rTree.properties.attributes.isRosettaElem = true;
         if (childrenContent) {
             childrenContent.map(function(item, index) {
                 if (!item.nodeType) {
