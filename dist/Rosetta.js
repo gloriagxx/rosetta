@@ -227,17 +227,17 @@ function createElementClass(protoOptions) {
             }
 
             this.__config[key] = re;
-            (function() {
-                if (isFunction(re)) {
-                    re.bind = function (context) {
-                        var params = arguments[1];
+            // (function() {
+            //     if (isFunction(re)) {
+            //         re.bind = function (context) {
+            //             var params = arguments[1];
 
-                        return function() {
-                            re.apply(context, params);
-                        }
-                    };
-                }
-            })();
+            //             return function() {
+            //                 re.apply(context, params);
+            //             }
+            //         };
+            //     }
+            // })();
             this[key] = re;
         }
     }
@@ -731,17 +731,17 @@ function attributeToProperty(name, value) {
         // only act if the value has changed
         if (value !== currentValue) {
             this.__config[name] = value;
-            (function() {
-                if (isFunction(value)) {
-                    value.bind = function (context) {
-                        var params = arguments[1];
+            // (function() {
+            //     if (isFunction(value)) {
+            //         value.bind = function (context) {
+            //             var params = arguments[1];
 
-                        return function() {
-                            value.apply(context, params);
-                        }
-                    };
-                }
-            })();
+            //             return function() {
+            //                 value.apply(context, params);
+            //             }
+            //         };
+            //     }
+            // })();
             this[name] = value;
         }
 
