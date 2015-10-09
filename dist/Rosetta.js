@@ -452,7 +452,7 @@ Delegator.transformHandle = DOMDelegator.transformHandle;
  * Safe for element IDs and server-side lookups.
  *
  * Extracted from CLCTR
- * 
+ *
  * Copyright (c) Eric Elliott 2012
  * MIT License
  */
@@ -518,7 +518,7 @@ Delegator.transformHandle = DOMDelegator.transformHandle;
 
       counter = safeCounter().toString(36).slice(-4);
 
-    return date.slice(-2) + 
+    return date.slice(-2) +
       counter + print + random;
   };
 
@@ -1314,16 +1314,17 @@ function register(type, renderFunc) {
     return newClass;
 }
 
-function ready(cb) {
+function ready(cb, ifOnce) {
     if (isFunction(cb)) {
+        ifOnce = ifOnce === true ? true : false;
         if (_allRendered == true) {
             cb();
+            !ifOnce && bind.call(Rosetta, 'ready', cb, null, ifOnce);
         } else {
-            bind.call(Rosetta, 'ready', cb);
+            bind.call(Rosetta, 'ready', cb, null, ifOnce);
         }
     }
 }
-
 
 var Rosetta = {
     init: init,
@@ -2129,9 +2130,9 @@ var plainDom = require('./plainDom.js'),
 
     isFunction = module.exports.isFunction = function(obj) {
         return typeof obj == 'function' || false;
-    }
+    },
 
-extend = module.exports.extend = function(target) {
+    extend = module.exports.extend = function(target) {
         var end = [].slice.call(arguments, arguments.length - 2),
             deep = false,
             params = null;
