@@ -114,10 +114,8 @@ function update(options) {
         return;
     }
 
-
-    attr = extend({}, this.__config, options, true);
+    attr = extend(this.__config, options, true);
     extend(this, attr, true);
-    // extend(this.__config, attr, true);
 
     var newTree = this.__t(this, this.$);
     newTree.properties.attributes.isRosettaElem = oldTree.properties.attributes.isRosettaElem;
@@ -228,9 +226,7 @@ function createElementClass(protoOptions) {
                 re = new value();
             }
 
-            extend(this.__config, {
-                key: re
-            }, true);
+            this.__config[key] = re;
             this[key] = re;
         }
     }
@@ -723,10 +719,8 @@ function attributeToProperty(name, value) {
 
         // only act if the value has changed
         if (value !== currentValue) {
+            this.__config[name] = value;
             this[name] = value;
-            extend(this.__config, {
-                name: value
-            }, true);
         }
 
         return value;
@@ -1987,7 +1981,20 @@ var plainDom = require('./plainDom.js');
      * @param {object} target - the object which to append new json values
      */
     extend = module.exports.extend = function(target) {
-        function changeEach(target, source, deep) {
+        var end = [].slice.call(arguments, arguments.length - 2),
+            deep = false,
+            params = null;
+
+        target = target || {};
+
+        if (end === true) {
+            deep = true;
+            params = [].slice.call(arguments, 1, arguments.length - 2);
+        } else {
+            params = [].slice.call(arguments, 1);
+        }
+
+        params.map(function(source, index) {
             for (key in source) {
                 if (deep && (isPlainObject(source[key]) || isArray(source[key]))) {
                     if (isPlainObject(source[key]) && !isPlainObject(target[key])) {
@@ -2003,23 +2010,6 @@ var plainDom = require('./plainDom.js');
                     target[key] = source[key];
                 }
             }
-        }
-
-        var end = [].slice.call(arguments, arguments.length - 2),
-            deep = false,
-            params = null;
-
-        target = target || {};
-
-        if (end === true) {
-            deep = true;
-            params = [].slice.call(arguments, 1, arguments.length - 2);
-        } else {
-            params = [].slice.call(arguments, 1);
-        }
-
-        params.map(function(source) {
-            changeEach(target, source, deep);
         });
 
         return target;
