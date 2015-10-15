@@ -165,15 +165,15 @@ function create(type, attr) {
     var obj = Rosetta.create.apply(Rosetta, arguments);
     // to update refs, something wrong here
 
-    var rTree = obj;//obj.rTree;
+    var rTree = obj;
 
     if (!!attr && !!attr.ref) {
         this.$[attr.ref] = rTree;
     }
 
     if (rTree && rTree.realObj && rTree.realObj.isRosettaElem == true) {
-        this.rosettaElems = this.rosettaElems || [];
-        this.rosettaElems.push(rTree.realObj);
+        this.rosettaElems = this.rosettaElems || {};
+        this.rosettaElems[rTree.realObj.rosettaElemID] = rTree.realObj;
     }
 
     return obj;
@@ -854,6 +854,20 @@ function getParent(dom) {
     }
 }
 
+function getID(currentDOM) {
+    var id = currentDOM.getAttribute('rosettaElemID');
+    if (!!id) {
+        return id;
+    } else {
+        return getID(currentDOM.parentElement);
+    }
+}
+
+function findContext(currentDOM, rootRosettaElem) {
+    var id = getID(currentDOM);
+    return rootRosettaElem.rosettaElems[id];
+}
+
 function eventDelegate(root, eventDelegatorObj) {
     var self = this;
 
@@ -871,7 +885,8 @@ function eventDelegate(root, eventDelegatorObj) {
 
                         var cb = EvStore(parent)[eventName];
                         if (!!cb) {
-                            cb.call(self, e);
+                            var context = findContext(parent, self);
+                            cb.call(context, e);
                         } else {
                             parent = parent.parentElement;
                             findCB(parent);
@@ -943,7 +958,6 @@ function render(rTree, root, force) {
                 }
             });
 
-
             if (newWrapper.children.length <= 0) {
                 newWrapper.parentElement.removeChild(newWrapper);
             }
@@ -974,6 +988,7 @@ function render(rTree, root, force) {
 
         eventDelegate.call(window, document, Rosetta._eventDelegatorObj);
         Rosetta._eventDelegatorObj = {};
+
 
         appendRoot(dom, root, force);
     }
@@ -1019,7 +1034,8 @@ function create(type, attr) {
         return rTree;
     } else {
         var NewClass = elemClass(type),
-            elemObj = null;
+            elemObj = null,
+            rosettaElemID = Math.random();
 
         if (!NewClass) {
             return;
@@ -1035,7 +1051,9 @@ function create(type, attr) {
 
         rTree = elemObj.__t(elemObj, elemObj.$);
 
-        rTree.properties.attributes.isRosettaElem = true;
+        rTree.properties.attributes.rosettaElemID = rosettaElemID;
+        elemObj.rosettaElemID = rosettaElemID;
+
         if (childrenContent) {
             childrenContent.map(function(item, index) {
                 if (!item.nodeType) {
@@ -2220,11 +2238,12 @@ var plainDom = require('./plainDom.js');
      * @param {string} type - event name
      */
     triggerChildren = module.exports.triggerChildren = function (obj, type) {
-        (obj.rosettaElems || []).map(function (item, index) {
+        for (var key in obj.rosettaElems) {
+            var item = obj.rosettaElems[key];
             triggerChildren(item, type);
             item[type].call(item);
             item.fire(type, item);
-        });
+        }
     };
 
 },{"./plainDom.js":5}],10:[function(require,module,exports){
