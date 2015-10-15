@@ -903,6 +903,18 @@ function eventDelegate(root, eventDelegatorObj) {
     }
 }
 
+function updateChildElemRoot(obj) {
+    var rosettaElems = obj.rosettaElems;
+    var root = obj.root;
+
+    for (var id in rosettaElems) {
+        var item = rosettaElems[id];
+
+        var dom = query('[rosettaElemID="' + id + '"]', root);
+        item.root = dom[0];
+        console.log(dom);
+    }
+}
 
 /**
  *
@@ -975,6 +987,8 @@ function render(rTree, root, force) {
 
         eventDelegate.call(obj, dom, Rosetta._eventDelegatorObj);
         Rosetta._eventDelegatorObj = {};
+
+        updateChildElemRoot(obj);
 
         obj.attached.call(obj);
 
