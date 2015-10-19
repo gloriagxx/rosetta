@@ -120,15 +120,24 @@ function update(options) {
     var newTree = this.__t(this, this.$);
     newTree.properties.attributes.isRosettaElem = oldTree.properties.attributes.isRosettaElem;
     newTree.properties.attributes.shouldReplacedContent = oldTree.properties.attributes.shouldReplacedContent;
+    newTree.properties.attributes.rosettaelemid = oldTree.properties.attributes.rosettaElemID;
 
     var patches = diff(oldTree, newTree);
 
+    for (var key in supportEvent) {
+        var eventName = supportEvent[key];
+        this.root.removeEventListener(eventName, Rosetta.eventRealCB, false);
+    }
+
+    console.log('update root : ', this.root);
+
     this.root = patch(this.root, patches);
     this.rTree = newTree;
+    this.rTree.realObj = oldTree.realObj;
 
     updateRefs(this, this.root);
 
-    Rosetta.eventDelegate.call(this.rTree.realObj, this.root, Rosetta._eventDelegatorObj);
+    // Rosetta.eventDelegate.call(this.rTree.realObj, this.root, Rosetta._eventDelegatorObj);
     Rosetta._eventDelegatorObj = {};
 
     this.attributeChanged.call(this);
@@ -693,6 +702,46 @@ var _eventDelegatorObj = {};
 
 var EvStore = require("./virtual-dom/node_modules/ev-store")
 
+/**
+ *
+ * @param {json} options - options for prototype of custom element
+ * @example, if it has no default value, then the value can be String/Object/
+    {
+        is: 'r-xxx'
+        ready: function() {}
+        created: function() {}
+        attached: function() {}
+        dettached: function() {}
+        attributeChanged: function() {}
+        extends: 'type name'
+        properties: {
+            aaa: 'string',//used for deserializezing from an attribute
+            bbb: [],
+            prop: {
+                type: String,
+                notify: true,
+                readOnly: true
+            }
+        }
+    }
+ * @param options.properties.xxx.type - Boolean, Date, Number, String, Array or Object
+ * @param options.properties.xxx.value - boolean, number, string or function
+ * String. No serialization required.
+ * Date or Number. Serialized using  toString.
+ * Boolean. Results in a non-valued attribute to be either set (true) or removed (false).
+ * Array or Object. Serialized using JSON.stringify.
+ *
+ */
+
+var Rosetta = function(options) {
+    var type = options.is;
+    var newClass = createElementClass(options);
+
+    elemClass(type, newClass);
+    htmlImport.factoryMap[options.__rid] = true;
+    return newClass;
+};
+
 
 /**
  * @function attributeToProperty
@@ -870,35 +919,42 @@ function findContext(currentDOM, rootRosettaElem) {
 
 function eventDelegate(root, eventDelegatorObj) {
     var self = this;
+    debugger;
+
+    function eventRealCB(e) {
+        var parent = e.target;
+        function findCB(parent) {
+            if (parent == root || !parent) {
+                return;
+            }
+
+            var cb = EvStore(parent)[e.type];
+            if (!!cb) {
+                var context = findContext(parent, self);
+                if (!context) {
+                    debugger;
+                }
+                cb.call(context, e);
+            } else {
+                parent = parent.parentElement;
+                findCB(parent);
+            }
+        }
+
+        findCB(parent);
+    }
+
+
+    Rosetta.eventRealCB = eventRealCB;
 
     for (var type in eventDelegatorObj) {
         (function(eventName) {
             root.bindedEvent = root.bindedEvent || {};
-
+            console.log('root : ', root);
             if (root.bindedEvent[eventName] !== true) {
-                root.addEventListener(eventName, function(e) {
-                    var parent = e.target;
-                    function findCB(parent) {
-                        if (parent == root || !parent) {
-                            return;
-                        }
-
-                        var cb = EvStore(parent)[eventName];
-                        if (!!cb) {
-                            var context = findContext(parent, self);
-                            cb.call(context, e);
-                        } else {
-                            parent = parent.parentElement;
-                            findCB(parent);
-                        }
-                    }
-
-                    findCB(parent);
-
-                }, false);
+                root.addEventListener(eventName, eventRealCB, false);
                 root.bindedEvent[eventName] = true;
             }
-
         })(type);
     }
 }
@@ -1112,46 +1168,6 @@ function ready(cb, ifOnce) {
 }
 
 
-
-/**
- *
- * @param {json} options - options for prototype of custom element
- * @example, if it has no default value, then the value can be String/Object/
-    {
-        is: 'r-xxx'
-        ready: function() {}
-        created: function() {}
-        attached: function() {}
-        dettached: function() {}
-        attributeChanged: function() {}
-        extends: 'type name'
-        properties: {
-            aaa: 'string',//used for deserializezing from an attribute
-            bbb: [],
-            prop: {
-                type: String,
-                notify: true,
-                readOnly: true
-            }
-        }
-    }
- * @param options.properties.xxx.type - Boolean, Date, Number, String, Array or Object
- * @param options.properties.xxx.value - boolean, number, string or function
- * String. No serialization required.
- * Date or Number. Serialized using  toString.
- * Boolean. Results in a non-valued attribute to be either set (true) or removed (false).
- * Array or Object. Serialized using JSON.stringify.
- *
- */
-
-var Rosetta = function(options) {
-    var type = options.is;
-    var newClass = createElementClass(options);
-
-    elemClass(type, newClass);
-    htmlImport.factoryMap[options.__rid] = true;
-    return newClass;
-};
 
 
 extend(Rosetta, {
