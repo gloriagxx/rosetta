@@ -52,7 +52,7 @@ export function bind(type, listener, context, ifOnce) {
  * @module fire
  * @param {string} type - trigger event which is represented by type
  */
-export function fire(type) {
+export function trigger(type) {
     this.events = this.events || {};
     var slice = [].slice,
         list = this.events[type];
@@ -102,4 +102,31 @@ export function triggerChildren(obj, type) {
         item[type].call(item);
         item.fire(type, item);
     }
+}
+
+
+export function updateChildElemRoot() {
+
+}
+
+
+export function eventDelegate() {
+
+}
+
+
+export function findContext() {
+
+}
+
+export function getID() {
+
+}
+
+export function getParent() {
+
+}
+
+export function appendRoot() {
+
 }

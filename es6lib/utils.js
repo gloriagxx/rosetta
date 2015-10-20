@@ -139,40 +139,40 @@ export function isFunction(obj) {
  * @module extend
  * @param {object} target - the object which to append new json values
  */
+function extendInternal(target, source, deep) {
+    for (var key in source)
+        if (deep && (isPlainObject(source[key]) || isArray(source[key]))) {
+            if (isPlainObject(source[key]) && !isPlainObject(target[key])) {
+                target[key] = {};
+            }
+
+            if (isArray(source[key]) && !isArray(target[key])) {
+                target[key] = [];
+            }
+
+            extend(target[key], source[key], deep);
+        } else if (source[key] !== undefined) {
+        target[key] = source[key];
+    }
+}
+
+// Copy all but undefined properties from one or more
+// objects to the `target` object.
 export function extend(target) {
-    var end = [].slice.call(arguments, arguments.length - 1)[0];
-    var deep = false;
-    var params = null;
-    var result = {};
+    var deep;
+    var target = arguments[0];
+    var args = [].slice.call(arguments, 1);
+    var end = arguments[arguments.length - 1];
 
-    target = target || {};
-
-    if (end === true || end === false) {
+    if (typeof end == 'boolean') {
         deep = end;
-        params = [].slice.call(arguments, 0, arguments.length - 1);
-    } else {
-        params = [].slice.call(arguments, 0);
+        args.pop();
     }
 
-    params.map(function(source, index) {
-        for (var key in source) {
-            if (deep && (isPlainObject(source[key]) || isArray(source[key]))) {
-                if (isPlainObject(source[key]) && !isPlainObject(result[key])) {
-                    result[key] = {};
-                }
-
-                if (isArray(source[key]) && !isArray(result[key])) {
-                    result[key] = [];
-                }
-
-                result[key] = extend(result[key], source[key], deep);
-            } else if (source[key] !== undefined) {
-                result[key] = source[key];
-            }
-        }
-    });
-
-    return result;
+    args.forEach(function(arg) {
+        extendInternal(target, arg, deep);
+    })
+    return target;
 }
 
 /**
@@ -230,4 +230,3 @@ export function deserializeValue(value, typeFunc, currentValue) {
     // delegate deserialization via type string
     return typeHandlers[inferredType](value, currentValue);
 }
-

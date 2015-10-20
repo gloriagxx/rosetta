@@ -161,7 +161,8 @@ describe('utils test', () => {
                 b: 112
             }
         };
-        var result = utils.extend(target, case1, true);
+        var result = utils.extend({}, target, case1, true);
+
         expect(result).toEqual({
             a: {
                 b: 112
@@ -190,6 +191,25 @@ describe('utils test', () => {
                 b: 112
             }
         });
+
+
+        case1 = {
+            a: {
+                c: {
+                    bb: 1212
+                }
+            }
+        };
+        var re = utils.extend({}, case1, true);
+        case1.a.c = 222;
+        expect(re).toEqual({
+            a: {
+                c: {
+                    bb: 1212
+                }
+            }
+        });
+
     });
 
     it('camelize test', () => {
@@ -262,7 +282,7 @@ describe('utils test', () => {
         // date
         value = new Date();
         currentValue = new Date();
-        expect(utils.deserializeValue(+value, Date, currentValue)).toEqual(value);
+        expect(+utils.deserializeValue(+value, Date, currentValue)).toEqual(+value);
 
         //undefined
         value = undefined;
@@ -279,6 +299,6 @@ describe('utils test', () => {
 
         //function
         value = 'function() {alert(1);}';
-        expect(utils.deserializeValue(value, Function), function(){}).toEqual(function() {alert(1);});
+        expect(utils.deserializeValue(value, Function, (function(){return 1})())).toEqual((function(){return 1})());
     });
 });
