@@ -193,37 +193,92 @@ describe('utils test', () => {
     });
 
     it('camelize test', () => {
+        //
+        let case1 = 'r-aaa';
 
+        expect(utils.camelize(case1)).toBe('rAaa');
+        // 
+        let case2 = 'r';
+        expect(utils.camelize(case2)).toBe('r');
     });
 
     it('toPlainArray test', () => {
+        let case1 = [];
+        expect(utils.toPlainArray(case1)).toEqual([]);
 
+        case1 = [1, 2];
+        expect(utils.toPlainArray(case1)).toEqual([1, 2]);
+
+        case1 = [1, 2, []];
+        expect(utils.toPlainArray(case1)).toEqual([1, 2, ]);
+
+        case1 = [1, 2, [3]];
+        expect(utils.toPlainArray(case1)).toEqual([1, 2, 3]);
+
+        case1 = [1, 2, [3, [4]]];
+        expect(utils.toPlainArray(case1)).toEqual([1, 2, 3, 4]);
     });
 
 
-    it('query test', () => {
+    // it('query test', () => {
 
-    });
-
-
-    it('bind test', () => {
-
-    });
+    // });
 
 
-    it('fire test', () => {
+    // it('bind test', () => {
 
-    });
+    // });
+
+
+    // it('fire test', () => {
+
+    // });
 
     it('deserializeValue test', () => {
+        // string
+        let value = '111';
+        let currentValue = '222';
+        expect(utils.deserializeValue(value, String, currentValue)).toBe(value);
 
-    });
 
-    it('updateRefs test', () => {
+        // json
+        value = '{"a": 1, "b": 2, "c": {"d": 3}}';
+        currentValue = {
+            aaa: 1
+        };
+        expect(utils.deserializeValue(value, Object, currentValue)).toEqual({
+            a: 1,
+            b: 2,
+            c: {
+                d: 3
+            }
+        });
 
-    });
+        //array
+        value = '[1,2,4]';
+        currentValue = [2,35,3];
+        expect(utils.deserializeValue(value, Array, currentValue)).toEqual([1,2,4]);
 
-    it('triggerChildren test', () => {
+        // date
+        value = new Date();
+        currentValue = new Date();
+        expect(utils.deserializeValue(+value, Date, currentValue)).toEqual(value);
 
+        //undefined
+        value = undefined;
+        expect(utils.deserializeValue(value)).toEqual(undefined);
+
+        //boolean
+
+        value = 'false';
+        expect(utils.deserializeValue(value, Boolean), true).toBe(false);
+
+        //number
+        value = '12.3';
+        expect(utils.deserializeValue(value, Number), 12).toBe(12.3);
+
+        //function
+        value = 'function() {alert(1);}';
+        expect(utils.deserializeValue(value, Function), function(){}).toEqual(function() {alert(1);});
     });
 });
