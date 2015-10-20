@@ -1,26 +1,168 @@
-var utils = require('../../lib/utils.js');
-var test = require('tape');
-require('../../lib/shims.js');
+import '../../lib/shims.js';
+import * as utils from '../../es6lib/utils.js';
+
+var typeCases = [
+    '1',
+    undefined,
+    function() {},
+    123,
+    ({a:1}),
+    true,
+    false,
+    'false',
+    null,
+    Date(),
+    +new Date(),
+    document.createElement('div'),
+    [1, 2, 3]
+];
+
+describe('type value handler test', () => {
+    it('type change', () => {
+        var typeHandlers = utils.typeHandlers;
+
+        var caseStr = 'test';
+        var caseUndefined = undefined;
+        var caseDate = +Date();
+        var caseBoolean = 'true';
+        var caseNumber = 1111.3;
+        var caseObject = {
+            testa: '1',
+            testb: 'testb'
+        };
+        var caseFunc = function () {
+            console.log('test func');
+        };
 
 
-test('to plain array test', function(t) {
-    t.plan(2);
-
-    var rarray = utils.toPlainArray([[1,2,['aaa',222,'444']], 'sadad', 'aaa', [121,45]]);
-
-    t.deepEqual(rarray, [1,2,'aaa',222,'444','sadad','aaa',121,45]);
-
-
-    var rarray2 = utils.toPlainArray([1,2,'4']);
-    t.deepEqual(rarray2, [1,2,'4']);
-
+        expect(caseStr).toBe(typeHandlers['string'](caseStr));
+        expect(caseUndefined).toBe(typeHandlers['undefined'](caseUndefined));
+        expect('object').toBe(typeof typeHandlers['date'](caseDate));
+        expect(true).toBe(typeHandlers['boolean'](caseBoolean));
+        expect(caseNumber).toBe(typeHandlers['number'](caseNumber + ''));
+        expect(caseObject).toEqual(typeHandlers['object'](JSON.stringify(caseObject)));
+        expect(caseFunc).toBe(typeHandlers['function'](caseFunc, caseFunc));
+    });
 });
 
 
-test('camelize test', function(t) {
-    t.plan(1);
+describe('isString test', function() {
+    it('isString', ()=> {
+        expect(true).toBe(utils.isString(typeCases[0]));
+        expect(false).toBe(utils.isString(typeCases[1]));
+        expect(false).toBe(utils.isString(typeCases[2]));
+        expect(false).toBe(utils.isString(typeCases[3]));
+        expect(false).toBe(utils.isString(typeCases[4]));
+        expect(false).toBe(utils.isString(typeCases[5]));
+        expect(false).toBe(utils.isString(typeCases[6]));
+        expect(true).toBe(utils.isString(typeCases[7]));
+        expect(false).toBe(utils.isString(typeCases[8]));
+        expect(true).toBe(utils.isString(typeCases[9]));
+        expect(false).toBe(utils.isString(typeCases[10]));
+        expect(false).toBe(utils.isString(typeCases[11]));
+    });
+});
 
-    var rstr = utils.camelize('r-sdsds');
+describe('isDomNode test', function() {
+    it('isDomNode', ()=> {
+        expect(false).toBe(utils.isDomNode(typeCases[0]));
+        expect(false).toBe(utils.isDomNode(typeCases[1]));
+        expect(false).toBe(utils.isDomNode(typeCases[2]));
+        expect(false).toBe(utils.isDomNode(typeCases[3]));
+        expect(false).toBe(utils.isDomNode(typeCases[4]));
+        expect(false).toBe(utils.isDomNode(typeCases[5]));
+        expect(false).toBe(utils.isDomNode(typeCases[6]));
+        expect(false).toBe(utils.isDomNode(typeCases[7]));
+        expect(false).toBe(utils.isDomNode(typeCases[8]));
+        expect(false).toBe(utils.isDomNode(typeCases[9]));
+        expect(false).toBe(utils.isDomNode(typeCases[10]));
+        expect(true).toBe(utils.isDomNode(typeCases[11]));
+    });
+});
 
-    t.equal(rstr, 'rSdsds');
+describe('isOriginalTag test', function() {
+    it('isOriginalTag', ()=> {
+        expect(false).toBe(utils.isOriginalTag('r-aaa'));
+        expect(true).toBe(utils.isOriginalTag('div'));
+    });
+});
+
+describe('isWindow test', function() {
+    it('isWindow', ()=> {
+        expect(true).toBe(utils.isWindow(window));
+        expect(false).toBe(utils.isWindow(null));
+        expect(false).toBe(utils.isWindow(''));
+    });
+});
+
+describe('isArray test', function() {
+    it('isArray', ()=> {
+        expect(false).toBe(utils.isArray(typeCases[0]));
+        expect(false).toBe(utils.isArray(typeCases[1]));
+        expect(false).toBe(utils.isArray(typeCases[2]));
+        expect(false).toBe(utils.isArray(typeCases[3]));
+        expect(false).toBe(utils.isArray(typeCases[4]));
+        expect(false).toBe(utils.isArray(typeCases[5]));
+        expect(false).toBe(utils.isArray(typeCases[6]));
+        expect(false).toBe(utils.isArray(typeCases[7]));
+        expect(false).toBe(utils.isArray(typeCases[8]));
+        expect(false).toBe(utils.isArray(typeCases[9]));
+        expect(false).toBe(utils.isArray(typeCases[10]));
+        expect(false).toBe(utils.isArray(typeCases[11]));
+        expect(true).toBe(utils.isArray(typeCases[12]));
+    });
+});
+
+describe('isObject test', function() {
+    it('isObject', ()=> {
+        expect(false).toBe(utils.isObject(typeCases[0]));
+        expect(false).toBe(utils.isObject(typeCases[1]));
+        expect(false).toBe(utils.isObject(typeCases[2]));
+        expect(false).toBe(utils.isObject(typeCases[3]));
+        expect(true).toBe(utils.isObject(typeCases[4]));
+        expect(false).toBe(utils.isObject(typeCases[5]));
+        expect(false).toBe(utils.isObject(typeCases[6]));
+        expect(false).toBe(utils.isObject(typeCases[7]));
+        expect(true).toBe(utils.isObject(typeCases[8]));
+        expect(false).toBe(utils.isObject(typeCases[9]));
+        expect(false).toBe(utils.isObject(typeCases[10]));
+        expect(true).toBe(utils.isObject(typeCases[11]));
+        expect(true).toBe(utils.isObject(typeCases[12]));
+    });
+});
+
+describe('isFunction test', function() {
+    it('isFunction', ()=> {
+        expect(false).toBe(utils.isFunction(typeCases[0]));
+        expect(false).toBe(utils.isFunction(typeCases[1]));
+        expect(true).toBe(utils.isFunction(typeCases[2]));
+        expect(false).toBe(utils.isFunction(typeCases[3]));
+        expect(false).toBe(utils.isFunction(typeCases[4]));
+        expect(false).toBe(utils.isFunction(typeCases[5]));
+        expect(false).toBe(utils.isFunction(typeCases[6]));
+        expect(false).toBe(utils.isFunction(typeCases[7]));
+        expect(false).toBe(utils.isFunction(typeCases[8]));
+        expect(false).toBe(utils.isFunction(typeCases[9]));
+        expect(false).toBe(utils.isFunction(typeCases[10]));
+        expect(false).toBe(utils.isFunction(typeCases[11]));
+        expect(false).toBe(utils.isFunction(typeCases[12]));
+    });
+});
+
+describe('isPlainObject test', function() {
+    it('isPlainObject', ()=> {
+        expect(false).toBe(utils.isPlainObject(typeCases[0]));
+        expect(false).toBe(utils.isPlainObject(typeCases[1]));
+        expect(false).toBe(utils.isPlainObject(typeCases[2]));
+        expect(false).toBe(utils.isPlainObject(typeCases[3]));
+        expect(true).toBe(utils.isPlainObject(typeCases[4]));
+        expect(false).toBe(utils.isPlainObject(typeCases[5]));
+        expect(false).toBe(utils.isPlainObject(typeCases[6]));
+        expect(false).toBe(utils.isPlainObject(typeCases[7]));
+        expect(false).toBe(utils.isPlainObject(typeCases[9]));
+        expect(false).toBe(utils.isPlainObject(typeCases[10]));
+        expect(false).toBe(utils.isPlainObject(typeCases[11]));
+        expect(false).toBe(utils.isPlainObject(typeCases[12]));
+        expect(false).toBe(utils.isPlainObject(typeCases[8]));
+    });
 });

@@ -10,7 +10,7 @@ var es5shim = require('./lib/shims.js'),
             if (!document.addEventListener) {
                 window.attachEvent('onload', callback);
             } else {
-                document.addEventListener('DOMContentLoaded', function() {
+                document.addEventListener('DOMContentLoaded', function {
                     callback();
                 }, false);
             }
