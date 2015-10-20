@@ -66,7 +66,6 @@ function Rosetta(opts) {
     var type = opts.is;
     var newClass = elementClassFactory(opts);
 
-    //
     setElemClass(type, newClass);
     htmlImport.factoryMap[opts.__rid] = true;
     return newClass;
@@ -137,24 +136,67 @@ function create(type, initAttr = {}) {
 
     var children = [].slice.call(arguments, 2);
     children = toPlainArray(children);
+    var vTree  = '';
 
     if (isOriginalTag(type)) {
         // 将initAttr转换为对应this.properties的type的attr真实值，并处理好vtree要求的事件属性格式
         // 生成vtree
+        {attr, elemObj, events} = handleAttr(initAttr);
 
+        var newAttr = extend({
+            attributes: attr
+        }, eventObj, true);
+
+        vTree = h.call(this, type, newAttr, children);
+        vTree.__events = events;
+
+        return vTree;
     } else {
         // 查找是否存在class
+        var ElemClass = getElemClass[type];
+        if (!ElemClass) {
+            return;
+        }
+
         // 生成rosetta elem的id
+        var elemID = Math.random();
+
         // 生成element实例
+        var elemObj = new ElemClass();
+
         // 设置name为initAttr.ref的值
+        elemObj.name = initAttr.ref ? initAttr.ref && ref(initAttr.ref, elemObj) : '';
         // 将initAttr转换为对应this.properties的type的attr真实值，并处理好vtree要求的事件属性格式
+        {attr, elemObj, events} = handleAttr(initAttr, elemObj);
         // 设置id，设置elem实例的property为attribute
-        // 存一份自己的需要delegate的event，设置到
+        attr.elemID = elemID;
+
         // 生成vtree
+        vTree  = elemObj.__t(elemObj, elemObj.$);
+
         // 处理children，将children存起来，方便根节点render的时候统一处理children content的事情
-        // 给当前的vtree以序列编号，便于根节点知道要把children插入到哪个content
+        if (children) {
+            children.map(function(item, index) {
+                if (!item.nodeType) {
+                    children[index] = createElement(item);
+                }
+            });
 
+            // 给当前的vtree序列号，便于根节点知道要把children插入到哪个content
+            // 疑似bug，需要重点单测
+            _shouldReplacedContent.push(children);
+            vTree.properties.attributes.shouldReplacedContent = _shouldReplacedContent.length - 1;
+        }
 
+        //vtree和robj相互引用，方便后面获取
+        elemObj.vTree = vTree;
+        vTree.rObj = elemObj;
+
+        // 派发created事件
+        elemObj.fire(CREATED, elemObj);
+        elemObj.created.call(elemObj);
+
+        return vTree;
     }
 }
 
@@ -177,6 +219,9 @@ function render() {
 
 
 
+
+
+    // 逻辑备份
     // 更新content逻辑：获取所有的content标签，找到他的第一级rosetta element，获取这个rosetta element需要替换的content的编号shouldReplacedContent，查找children dom
     // 更新事件逻辑：将事件代理到每一级rosetta element的根root上，保存一份old已绑定事件，方便update的时候diff增加；当根节点上事件触发的时候，通过evstore查找当前dom上是否有对应事件的callback，如果有则执行，否则递归到parent；阻止冒泡（update的时候将当前的和old进行diff绑定diff的）
     // 更新内部ref逻辑：将ref属性设置到节点的attribute上，已经有dom的时候query一下ref=xxx获得dom，然后更新$
@@ -205,22 +250,92 @@ function ready(cb, ifOnce) {
  *
  */
 
-function getElemClass() {
+function getElemClass(type) {
+    if (!type) {
+        return;
+    }
 
+    return _elemClass[type];
 }
 
-function setElemClass() {
-
+function setElemClass(type, newClass) {
+    if (!!type && !!newClass) {
+        _elemClass[type] = newClass;
+    }
 }
 
-function getRef() {
-
+function getRef(key, value) {
+    if (!key) {
+        return;
+    }
+    return _refers[key];
 }
 
-function setRef() {
-
+function setRef(key, value) {
+    if (!!key && !!value) {
+        _refers[key] = value;
+    }
 }
 
-function getRealAttr() {
+/**
+ * @function attributeToProperty
+ * @param name
+ * @param value
+ */
+function attributeToProperty(name, value) {
+    if (name) {
+        var item = this.properties[name] || String;
+        var supportType = [Boolean, Date, Number, String, Array, Object];
+        var index = supportType.indexOf(item);
+        var typeFunc = supportType[index];
+        var currentValue = this[name] || null;
 
+        if (index < 0) {
+            var typeFunc = item.type;
+        }
+
+
+        if (!(typeof typeFunc() == typeof value)) {
+            // deserialize Boolean or Number values from attribute
+            value = deserializeValue(value, typeFunc, currentValue);
+        }
+
+        // only act if the value has changed
+        if (value !== currentValue) {
+            if (isPlainObject(value)) {
+                var configValue = extend({}, value, true);
+            }
+
+            this.__config[name] = configValue;
+            this[name] = value;
+        }
+
+        return value;
+  }
+}
+function handleAttr(attr, rosettaObj) {
+    // 处理attributes，转换为attr和事件分离的格式；如果需要toRealType，则转换类型（比较消耗性能）
+    var eventObj = {};
+    var events = [];
+
+    for (var name in attr) {
+        var item = attr[name];
+
+        if (!!rosettaObj) {
+            attr[name] = attributeToProperty.call(this, name, item);
+        }
+
+        if (supportEvent[name]) {
+            eventObj['ev-' + supportEvent[name]] = item;
+            events.push(supportEvent[name]);
+            delete attr[name];
+        }
+    }
+
+
+    return {
+        eventObj,
+        attr,
+        events
+    }
 }

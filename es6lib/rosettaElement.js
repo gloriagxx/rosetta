@@ -84,7 +84,7 @@ function update(opts) {
     extend(newAttrs, {
         isRosettaElem: oldAttrs.isRosettaElem,
         shouldReplacedContent: oldAttrs.shouldReplacedContent,
-        rObjID: oldAttrs.rObjID
+        elemID: oldAttrs.elemID
     }, true);
 
     var patches = diff(oldTree, newTree);
@@ -149,7 +149,10 @@ function create(elemType, attr) {
     // 如果该字节点为rosettaElement，则存储生成的字节点的到父节点this的rosettaElems中存起来
     if (!!vTree && !!vTree.rObj && vTree.rObj.isRosettaElem == true) {
         // 将子节点为rosettaElem的放到rosettaChildren里
-        this.rosettaChildren[vTree.rObj.rObjID] = vTree.rObj;
+        this.rosettaChildren[vTree.rObj.elemID] = vTree.rObj;
+    } else {
+        // 将子节点处理的事件保存到this上，作为rosetta element需要为子节点代理的事件
+
     }
 
     return vTree;
