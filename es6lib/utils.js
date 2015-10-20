@@ -140,38 +140,39 @@ export function isFunction(obj) {
  * @param {object} target - the object which to append new json values
  */
 export function extend(target) {
-    var end = [].slice.call(arguments, arguments.length - 2),
-        deep = false,
-        params = null;
+    var end = [].slice.call(arguments, arguments.length - 1)[0];
+    var deep = false;
+    var params = null;
+    var result = {};
 
     target = target || {};
 
-    if (end === true) {
-        deep = true;
-        params = [].slice.call(arguments, 1, arguments.length - 2);
+    if (end === true || end === false) {
+        deep = end;
+        params = [].slice.call(arguments, 0, arguments.length - 1);
     } else {
-        params = [].slice.call(arguments, 1);
+        params = [].slice.call(arguments, 0);
     }
 
     params.map(function(source, index) {
-        for (key in source) {
+        for (var key in source) {
             if (deep && (isPlainObject(source[key]) || isArray(source[key]))) {
-                if (isPlainObject(source[key]) && !isPlainObject(target[key])) {
-                    target[key] = {};
+                if (isPlainObject(source[key]) && !isPlainObject(result[key])) {
+                    result[key] = {};
                 }
 
-                if (isArray(source[key]) && !isArray(target[key])) {
-                    target[key] = [];
+                if (isArray(source[key]) && !isArray(result[key])) {
+                    result[key] = [];
                 }
 
-                extend(target[key], source[key], deep);
+                result[key] = extend(result[key], source[key], deep);
             } else if (source[key] !== undefined) {
-                target[key] = source[key];
+                result[key] = source[key];
             }
         }
     });
 
-    return target;
+    return result;
 }
 
 /**

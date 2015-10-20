@@ -5,20 +5,19 @@ var typeCases = [
     '1',
     undefined,
     function() {},
-    123,
-    ({a:1}),
+    123, ({
+        a: 1
+    }),
     true,
     false,
     'false',
     null,
-    Date(),
-    +new Date(),
-    document.createElement('div'),
-    [1, 2, 3]
+    Date(), +new Date(),
+    document.createElement('div'), [1, 2, 3]
 ];
 
-describe('type value handler test', () => {
-    it('type change', () => {
+describe('utils test', () => {
+    it('type value handler test', () => {
         var typeHandlers = utils.typeHandlers;
 
         var caseStr = 'test';
@@ -30,7 +29,7 @@ describe('type value handler test', () => {
             testa: '1',
             testb: 'testb'
         };
-        var caseFunc = function () {
+        var caseFunc = function() {
             console.log('test func');
         };
 
@@ -43,11 +42,8 @@ describe('type value handler test', () => {
         expect(caseObject).toEqual(typeHandlers['object'](JSON.stringify(caseObject)));
         expect(caseFunc).toBe(typeHandlers['function'](caseFunc, caseFunc));
     });
-});
 
-
-describe('isString test', function() {
-    it('isString', ()=> {
+    it('isString test', () => {
         expect(true).toBe(utils.isString(typeCases[0]));
         expect(false).toBe(utils.isString(typeCases[1]));
         expect(false).toBe(utils.isString(typeCases[2]));
@@ -61,10 +57,8 @@ describe('isString test', function() {
         expect(false).toBe(utils.isString(typeCases[10]));
         expect(false).toBe(utils.isString(typeCases[11]));
     });
-});
 
-describe('isDomNode test', function() {
-    it('isDomNode', ()=> {
+    it('isDomNode test', () => {
         expect(false).toBe(utils.isDomNode(typeCases[0]));
         expect(false).toBe(utils.isDomNode(typeCases[1]));
         expect(false).toBe(utils.isDomNode(typeCases[2]));
@@ -78,25 +72,35 @@ describe('isDomNode test', function() {
         expect(false).toBe(utils.isDomNode(typeCases[10]));
         expect(true).toBe(utils.isDomNode(typeCases[11]));
     });
-});
 
-describe('isOriginalTag test', function() {
-    it('isOriginalTag', ()=> {
+    it('isOriginalTag test', () => {
         expect(false).toBe(utils.isOriginalTag('r-aaa'));
         expect(true).toBe(utils.isOriginalTag('div'));
     });
-});
 
-describe('isWindow test', function() {
-    it('isWindow', ()=> {
+    it('isWindow test', () => {
         expect(true).toBe(utils.isWindow(window));
         expect(false).toBe(utils.isWindow(null));
         expect(false).toBe(utils.isWindow(''));
     });
-});
 
-describe('isArray test', function() {
-    it('isArray', ()=> {
+    it('isPlainObject test', () => {
+        expect(false).toBe(utils.isPlainObject(typeCases[0]));
+        expect(false).toBe(utils.isPlainObject(typeCases[1]));
+        expect(false).toBe(utils.isPlainObject(typeCases[2]));
+        expect(false).toBe(utils.isPlainObject(typeCases[3]));
+        expect(true).toBe(utils.isPlainObject(typeCases[4]));
+        expect(false).toBe(utils.isPlainObject(typeCases[5]));
+        expect(false).toBe(utils.isPlainObject(typeCases[6]));
+        expect(false).toBe(utils.isPlainObject(typeCases[7]));
+        expect(false).toBe(utils.isPlainObject(typeCases[9]));
+        expect(false).toBe(utils.isPlainObject(typeCases[10]));
+        expect(false).toBe(utils.isPlainObject(typeCases[11]));
+        expect(false).toBe(utils.isPlainObject(typeCases[12]));
+        expect(false).toBe(utils.isPlainObject(typeCases[8]));
+    });
+
+    it('isArray test', () => {
         expect(false).toBe(utils.isArray(typeCases[0]));
         expect(false).toBe(utils.isArray(typeCases[1]));
         expect(false).toBe(utils.isArray(typeCases[2]));
@@ -111,10 +115,7 @@ describe('isArray test', function() {
         expect(false).toBe(utils.isArray(typeCases[11]));
         expect(true).toBe(utils.isArray(typeCases[12]));
     });
-});
-
-describe('isObject test', function() {
-    it('isObject', ()=> {
+    it('isObject test', () => {
         expect(false).toBe(utils.isObject(typeCases[0]));
         expect(false).toBe(utils.isObject(typeCases[1]));
         expect(false).toBe(utils.isObject(typeCases[2]));
@@ -129,10 +130,8 @@ describe('isObject test', function() {
         expect(true).toBe(utils.isObject(typeCases[11]));
         expect(true).toBe(utils.isObject(typeCases[12]));
     });
-});
 
-describe('isFunction test', function() {
-    it('isFunction', ()=> {
+    it('isFunction test', () => {
         expect(false).toBe(utils.isFunction(typeCases[0]));
         expect(false).toBe(utils.isFunction(typeCases[1]));
         expect(true).toBe(utils.isFunction(typeCases[2]));
@@ -147,22 +146,84 @@ describe('isFunction test', function() {
         expect(false).toBe(utils.isFunction(typeCases[11]));
         expect(false).toBe(utils.isFunction(typeCases[12]));
     });
-});
 
-describe('isPlainObject test', function() {
-    it('isPlainObject', ()=> {
-        expect(false).toBe(utils.isPlainObject(typeCases[0]));
-        expect(false).toBe(utils.isPlainObject(typeCases[1]));
-        expect(false).toBe(utils.isPlainObject(typeCases[2]));
-        expect(false).toBe(utils.isPlainObject(typeCases[3]));
-        expect(true).toBe(utils.isPlainObject(typeCases[4]));
-        expect(false).toBe(utils.isPlainObject(typeCases[5]));
-        expect(false).toBe(utils.isPlainObject(typeCases[6]));
-        expect(false).toBe(utils.isPlainObject(typeCases[7]));
-        expect(false).toBe(utils.isPlainObject(typeCases[9]));
-        expect(false).toBe(utils.isPlainObject(typeCases[10]));
-        expect(false).toBe(utils.isPlainObject(typeCases[11]));
-        expect(false).toBe(utils.isPlainObject(typeCases[12]));
-        expect(false).toBe(utils.isPlainObject(typeCases[8]));
+
+    it('extend test', () => {
+        var target = {
+            a: {
+                b: {
+                    c: 123
+                }
+            }
+        };
+        var case1 = {
+            a: {
+                b: 112
+            }
+        };
+        var result = utils.extend(target, case1, true);
+        expect(result).toEqual({
+            a: {
+                b: 112
+            }
+        });
+        expect(target).toEqual({
+            a: {
+                b: {
+                    c: 123
+                }
+            }
+        });
+        case1 = {
+            a: {
+                b: [1, 2, 3]
+            }
+        };
+        target = {
+            a: {
+                b: [1, 2, 3]
+            }
+        };
+
+        expect(result).toEqual({
+            a: {
+                b: 112
+            }
+        });
+    });
+
+    it('camelize test', () => {
+
+    });
+
+    it('toPlainArray test', () => {
+
+    });
+
+
+    it('query test', () => {
+
+    });
+
+
+    it('bind test', () => {
+
+    });
+
+
+    it('fire test', () => {
+
+    });
+
+    it('deserializeValue test', () => {
+
+    });
+
+    it('updateRefs test', () => {
+
+    });
+
+    it('triggerChildren test', () => {
+
     });
 });
