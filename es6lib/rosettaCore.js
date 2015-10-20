@@ -176,7 +176,7 @@ function create(type, initAttr = {}) {
 
         // 处理children，将children存起来，方便根节点render的时候统一处理children content的事情
         if (children) {
-            children.map(function(item, index) {
+            children.map((item, index) => {
                 if (!item.nodeType) {
                     children[index] = createElement(item);
                 }
@@ -313,6 +313,12 @@ function attributeToProperty(name, value) {
         return value;
   }
 }
+
+/*
+ * @function handleAttr: change attributes to goal structure, if !!rosettaObj then change attributes to real value according to properties' type
+ * @param {json} attr: attributes of elements
+ * @param {object} rosettaObj: rosetta element instance
+ */
 function handleAttr(attr, rosettaObj) {
     // 处理attributes，转换为attr和事件分离的格式；如果需要toRealType，则转换类型（比较消耗性能）
     var eventObj = {};
