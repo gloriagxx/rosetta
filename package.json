@@ -19,7 +19,7 @@
     "main": "index",
     "repository": "git@github.com:jiexuangao/rosetta.git",
     "scripts": {
-        "dist": "browserify indexes6.js -t [ babelify --stage 0 ] --outfile ./dist/Rosetta.js",
+        "dist": "browserify index.js -t [ babelify --stage 0 ] --outfile ./dist/Rosetta.js",
 
         "test": "karma start"
     },

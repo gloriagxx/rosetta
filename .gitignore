@@ -1,6 +1,7 @@
 # Logs
 logs
 *.log
+tmplib
 
 # Runtime data
 pids

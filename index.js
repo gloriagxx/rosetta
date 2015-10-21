@@ -1,21 +1,21 @@
-var es5shim = require('./lib/shims.js'),
+import Rosetta from './lib/rosettaCore.js';
 
-    Rosetta = require('./lib/rosetta.js'),
+require('./lib/shims.js');
+var readyRE = /complete/;
 
-    readyRE = /complete/,
-    ready = function(callback) {
-        if (readyRE.test(document.readyState) && document.body) {
-            callback();
+function ready(callback) {
+    if (readyRE.test(document.readyState) && document.body) {
+        callback();
+    } else {
+        if (!document.addEventListener) {
+            window.attachEvent('onload', callback);
         } else {
-            if (!document.addEventListener) {
-                window.attachEvent('onload', callback);
-            } else {
-                document.addEventListener('DOMContentLoaded', function() {
-                    callback();
-                }, false);
-            }
+            document.addEventListener('DOMContentLoaded', () => {
+                callback();
+            }, false);
         }
-    };
+    }
+}
 
 window.Rosetta = Rosetta;
 

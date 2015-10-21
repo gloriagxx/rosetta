@@ -1,6 +1,36 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _libRosettaCoreJs = require('./lib/rosettaCore.js');
+
+var _libRosettaCoreJs2 = _interopRequireDefault(_libRosettaCoreJs);
+
+require('./lib/shims.js');
+var readyRE = /complete/;
+
+function ready(callback) {
+    if (readyRE.test(document.readyState) && document.body) {
+        callback();
+    } else {
+        if (!document.addEventListener) {
+            window.attachEvent('onload', callback);
+        } else {
+            document.addEventListener('DOMContentLoaded', function () {
+                callback();
+            }, false);
+        }
+    }
+}
+
+window.Rosetta = _libRosettaCoreJs2['default'];
+
+ready(_libRosettaCoreJs2['default'].render);
+
+},{"./lib/rosettaCore.js":6,"./lib/shims.js":8}],2:[function(require,module,exports){
+'use strict';
+
 Object.defineProperty(exports, '__esModule', {
     value: true
 });
@@ -16,6 +46,7 @@ exports.updateChildElemRoot = updateChildElemRoot;
 exports.appendRoot = appendRoot;
 exports.handleContent = handleContent;
 exports.handleEvent = handleEvent;
+exports.getPatches = getPatches;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -26,6 +57,18 @@ var _supportEventJs = require('./supportEvent.js');
 var _evStore = require("ev-store");
 
 var _evStore2 = _interopRequireDefault(_evStore);
+
+var _virtualDomH = require('virtual-dom/h');
+
+var _virtualDomH2 = _interopRequireDefault(_virtualDomH);
+
+var _virtualDomDiff = require('virtual-dom/diff');
+
+var _virtualDomDiff2 = _interopRequireDefault(_virtualDomDiff);
+
+var _virtualDomCreateElement = require('virtual-dom/create-element');
+
+var _virtualDomCreateElement2 = _interopRequireDefault(_virtualDomCreateElement);
 
 /**
  *
@@ -185,7 +228,7 @@ function attributeToProperty(name, value) {
         // only act if the value has changed
         if (value !== currentValue) {
             if ((0, _utilsJs.isPlainObject)(value)) {
-                var configValue = extend({}, value, true);
+                var configValue = (0, _utilsJs.extend)({}, value, true);
             }
 
             this.__config[name] = configValue;
@@ -319,18 +362,15 @@ function handleEvent(obj) {
                 (function (eventName, ifBinded, itemObj) {
                     var root = itemObj.root;
 
-                    console.log(itemObj.type, eventName, ifBinded);
+                    var cb = function cb(e) {
+                        eventRealCB(e, itemObj);
+                    };
+
                     if (ifBinded === 0) {
                         if (root.addEventListener) {
-                            root.addEventListener(eventName, function (e) {
-                                e.stopPropagation();
-                                eventRealCB(e, itemObj);
-                            }, false);
+                            root.addEventListener(eventName, cb, false);
                         } else {
-                            root.attachEvent('on' + eventName, function (e) {
-                                e.stopPropagation();
-                                eventRealCB(e, itemObj);
-                            });
+                            root.attachEvent('on' + eventName, cb);
                         }
                     }
                 })(type, events[type], childObj);
@@ -343,6 +383,7 @@ function handleEvent(obj) {
 }
 
 function eventRealCB(e, obj) {
+    e.stopPropagation();
     var parent = e.target;
     var root = obj.root;
 
@@ -363,7 +404,26 @@ function eventRealCB(e, obj) {
     findCB(parent);
 }
 
-},{"./supportEvent.js":8,"./utils.js":9,"ev-store":12}],2:[function(require,module,exports){
+function getPatches(obj, oldTree) {
+    obj = (0, _utilsJs.extend)({}, obj, true);
+    // 生成新vtree和patches
+    var newTree = obj.__t(obj, obj.$);
+    var oldAttrs = oldTree.properties.attributes;
+    var newAttrs = newTree.properties.attributes;
+
+    (0, _utilsJs.extend)(newAttrs, {
+        isRosettaElem: oldAttrs.isRosettaElem,
+        shouldReplacedContent: oldAttrs.shouldReplacedContent,
+        elemID: oldAttrs.elemID
+    }, true);
+
+    return {
+        patches: (0, _virtualDomDiff2['default'])(oldTree, newTree),
+        newTree: newTree
+    };
+}
+
+},{"./supportEvent.js":9,"./utils.js":10,"ev-store":12,"virtual-dom/create-element":15,"virtual-dom/diff":16,"virtual-dom/h":17}],3:[function(require,module,exports){
 /**
  *
  *  file: htmlimport.js
@@ -606,7 +666,7 @@ function loadScript(id, callback, onerror) {
 htmlImport.factoryMap = factoryMap;
 htmlImport.resourceMap = resourceMap;
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -623,7 +683,7 @@ exports.READY = READY;
 var ATTRIBUTECHANGE = 'attributeChanged';
 exports.ATTRIBUTECHANGE = ATTRIBUTECHANGE;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -767,7 +827,7 @@ var plainDOM = {
 };
 exports.plainDOM = plainDOM;
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /*@require ./rosetta.css*/
 
 /**
@@ -1138,7 +1198,7 @@ function Rosetta(opts) {
 exports['default'] = Rosetta;
 module.exports = exports['default'];
 
-},{"./elementUtils.js":1,"./htmlImport":2,"./lifeEvents.js":3,"./rosettaElement.js":6,"./supportEvent.js":8,"./utils.js":9,"virtual-dom/create-element":15,"virtual-dom/h":17}],6:[function(require,module,exports){
+},{"./elementUtils.js":2,"./htmlImport":3,"./lifeEvents.js":4,"./rosettaElement.js":7,"./supportEvent.js":9,"./utils.js":10,"virtual-dom/create-element":15,"virtual-dom/h":17}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1159,18 +1219,6 @@ var _elementUtilsJs = require('./elementUtils.js');
 var _supportEventJs = require('./supportEvent.js');
 
 // vdom relavent
-
-var _virtualDomH = require('virtual-dom/h');
-
-var _virtualDomH2 = _interopRequireDefault(_virtualDomH);
-
-var _virtualDomCreateElement = require('virtual-dom/create-element');
-
-var _virtualDomCreateElement2 = _interopRequireDefault(_virtualDomCreateElement);
-
-var _virtualDomDiff = require('virtual-dom/diff');
-
-var _virtualDomDiff2 = _interopRequireDefault(_virtualDomDiff);
 
 var _virtualDomPatch = require('virtual-dom/patch');
 
@@ -1248,18 +1296,9 @@ function update(opts) {
     (0, _utilsJs.extend)(this.__config, (0, _utilsJs.extend)({}, opts, true));
     rObj.rosettaChildren = [];
 
-    // 生成新vtree和patches
-    var newTree = this.__t(this, this.$);
-    var oldAttrs = oldTree.properties.attributes;
-    var newAttrs = newTree.properties.attributes;
-
-    (0, _utilsJs.extend)(newAttrs, {
-        isRosettaElem: oldAttrs.isRosettaElem,
-        shouldReplacedContent: oldAttrs.shouldReplacedContent,
-        elemID: oldAttrs.elemID
-    }, true);
-
-    var patches = (0, _virtualDomDiff2['default'])(oldTree, newTree);
+    var re = (0, _elementUtilsJs.getPatches)(rObj, oldTree);
+    var patches = re.patches;
+    var newTree = re.newTree;
 
     // 更新树
     this.root = (0, _virtualDomPatch2['default'])(rootNode, patches);
@@ -1437,7 +1476,7 @@ function elementClassFactory(prototypeOpts) {
 
 module.exports = exports['default'];
 
-},{"./elementUtils.js":1,"./lifeEvents.js":3,"./supportEvent.js":8,"./utils.js":9,"virtual-dom/create-element":15,"virtual-dom/diff":16,"virtual-dom/h":17,"virtual-dom/patch":25}],7:[function(require,module,exports){
+},{"./elementUtils.js":2,"./lifeEvents.js":4,"./supportEvent.js":9,"./utils.js":10,"virtual-dom/patch":25}],8:[function(require,module,exports){
 /*!
  * https://github.com/es-shims/es5-shim
  * @license es5-shim Copyright 2009-2015 by contributors, MIT License
@@ -2172,7 +2211,7 @@ module.exports = exports['default'];
     }
 })();
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 /**
  * Module representing the supported events
  * @module supportEvent
@@ -2230,7 +2269,7 @@ var supportEvent = {
 };
 exports.supportEvent = supportEvent;
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2495,37 +2534,7 @@ function deserializeValue(value, typeFunc, currentValue) {
     return typeHandlers[inferredType](value, currentValue);
 }
 
-},{"./plainDOM.js":4}],10:[function(require,module,exports){
-'use strict';
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var _es6libRosettaCoreJs = require('./es6lib/rosettaCore.js');
-
-var _es6libRosettaCoreJs2 = _interopRequireDefault(_es6libRosettaCoreJs);
-
-require('./es6lib/shims.js');
-var readyRE = /complete/;
-
-function ready(callback) {
-    if (readyRE.test(document.readyState) && document.body) {
-        callback();
-    } else {
-        if (!document.addEventListener) {
-            window.attachEvent('onload', callback);
-        } else {
-            document.addEventListener('DOMContentLoaded', function () {
-                callback();
-            }, false);
-        }
-    }
-}
-
-window.Rosetta = _es6libRosettaCoreJs2['default'];
-
-ready(_es6libRosettaCoreJs2['default'].render);
-
-},{"./es6lib/rosettaCore.js":5,"./es6lib/shims.js":7}],11:[function(require,module,exports){
+},{"./plainDOM.js":5}],11:[function(require,module,exports){
 
 },{}],12:[function(require,module,exports){
 'use strict';
@@ -4102,4 +4111,4 @@ function appendPatch(apply, patch) {
     }
 }
 
-},{"../vnode/handle-thunk":36,"../vnode/is-thunk":37,"../vnode/is-vnode":39,"../vnode/is-vtext":40,"../vnode/is-widget":41,"../vnode/vpatch":44,"./diff-props":46,"x-is-array":24}]},{},[10]);
+},{"../vnode/handle-thunk":36,"../vnode/is-thunk":37,"../vnode/is-vnode":39,"../vnode/is-vtext":40,"../vnode/is-widget":41,"../vnode/vpatch":44,"./diff-props":46,"x-is-array":24}]},{},[1]);
