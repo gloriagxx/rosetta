@@ -932,14 +932,21 @@ function init() {
  * @param {object} initArr, attributes of the newly created element
  * @return {object} vTree, contains referer of rosetta instance
  */
-function create(type, initAttr, len) {
+function create(type, initAttr) {
+    for (var _len = arguments.length, children = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+        children[_key - 2] = arguments[_key];
+    }
+
     if (!(0, _utilsJs.isString)(type)) {
         return;
     }
 
     initAttr = initAttr || {};
 
-    var children = len ? [].slice.call(arguments, 2, arguments.length - 1) : [].slice.call(arguments, 2);
+    var childLen = children.length;
+    var len = children[childLen - 1];
+    var children = typeof len === 'number' ? [].slice.call(children, 0, childLen - 1) : children;
+
     children = (0, _utilsJs.toPlainArray)(children);
     var vTree = '';
 
