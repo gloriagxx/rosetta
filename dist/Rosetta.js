@@ -287,7 +287,6 @@ function updateChildElemRoot(obj) {
         var dom = query('[elemID="' + id + '"]', root);
         item.root = dom[0];
 
-        console.log(obj.type, id);
         updateChildElemRoot(item);
     });
 }
