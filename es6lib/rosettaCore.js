@@ -12,7 +12,7 @@ import {ATTACHED, DETACHED, CREATED, ATTRIBUTECHANGE} from './lifeEvents.js';
 import htmlImport from './htmlImport';
 import supportEvent from './supportEvent.js';
 import {isArray, query, extend, toPlainArray, isOriginalTag, isDomNode, isString, isFunction, bind, fire, deserializeValue, typeHandlers} from './utils.js';
-import {updateRefs, triggerChildren} from './elementUtils.js';
+import {updateRefs, triggerChildren, handleEvent, attributeToProperty, handleAttr, handleContent, updateChildElemRoot, appendRoot} from './elementUtils.js';
 
 
 // vdom relavent
@@ -25,6 +25,7 @@ import EvStore from "./virtual-dom/node_modules/ev-store";
 var _allRendered = false; // 调用init的开始置为false，本次渲染所有组件render完毕就是true；如果存在因未定义而未渲染的也算作是true，因此可以理解为“本次符合渲染条件的都渲染完了”
 var _refers = {}; // to store ref of Rosetta element instance in Rosetta
 var _elemClass = {};
+var _shouldReplacedContent = [];
 
 
 
@@ -176,6 +177,7 @@ function create(type, initAttr = {}) {
 
         // 处理children，将children存起来，方便根节点render的时候统一处理children content的事情
         if (children) {
+            // rosetta节点的children都需要走content过滤的逻辑
             children.map((item, index) => {
                 if (!item.nodeType) {
                     children[index] = createElement(item);
@@ -191,6 +193,7 @@ function create(type, initAttr = {}) {
         //vtree和robj相互引用，方便后面获取
         elemObj.vTree = vTree;
         vTree.rObj = elemObj;
+        vTree.__events = events;
 
         // 派发created事件
         elemObj.fire(CREATED, elemObj);
@@ -201,27 +204,64 @@ function create(type, initAttr = {}) {
 }
 
 /*
- * @function
- * @
+ * @function render element to dom, or render all the element in the document.body
+ * @param {object} vTree is the vtree of rosetta element instance to be render to parent dom
+ * @param {domnode} parentDOM is where rosetta element to be rendered to
+ * @param {boolean} ifReplace represent whether to append to parentDOM or replace it
  */
-function render() {
+function render(vTree, parentDOM, ifReplace) {
+    // 如果没有参数，表示全document渲染dom
+    if (！vTree) {
+        init();
+        return;
+    }
+
+    // 处理parentDOM
+    if (isString(parentDOM)) {
+        parentDOM = qurey(parentDOM)[0];
+    }
+
+    // 生成dom
+    var dom = createElement(vTree);
     // 从vtree获得rosetta element instance
-    // 处理content
-    // 更新内部dom节点的ref
-    // 更新自己的ref到rosetta
-    // 更新内部rosetta element instance的root（render前都是虚拟dom，嵌套的子element实际没有dom类型的root）
-    // 处理事件绑定: 遍历每个子rosetta element绑定事件，绑定自己的事情
-    // 更新dom
+    var rObj = vTree.rObj;
+
+    if (!parentDOM) {
+        return;
+    }
+
+    if (!!rObj && rObj.isRosettaElem == true) {
+        rObj.root = dom;
+        var contents = query('content', rObj.root);
+        // 处理content
+        handleContent(contents);
+        // 更新内部dom节点的ref
+        updateRefs(rObj);
+        // 更新自己的ref到rosetta
+        setRef(rObj.__config.ref, rObj);
+        // 更新内部rosetta element instance的root（render前都是虚拟dom，嵌套的子element实际没有dom类型的root）
+        updateChildElemRoot(rObj);
+        // 处理事件绑定: 遍历每个子rosetta element绑定事件，绑定自己的事情
+        handleEvent(rObj);
+        // 派发element的ready事件（已经有dom，但是并未appedn到父节点上）
+        triggerChildren(rObj, 'domready');
+        // 更新dom
+        appendRoot(dom, parentDOM, ifReplace);
+        // 派发attached事件相关
+        triggerChildren(rObj, ATTACHED);
+        rObj.fire(ATTACHED, rObj);
+        rObj.attached.call(rObj);
+        return rObj;
+    } else {
+        // 处理事件代理
+
+        // dom append到parentdom上
+        appendRoot(dom, parentDOM, ifReplace);
+    }
 
 
 
-
-
-
-
-
-
-    // 逻辑备份
+    // 逻辑
     // 更新content逻辑：获取所有的content标签，找到他的第一级rosetta element，获取这个rosetta element需要替换的content的编号shouldReplacedContent，查找children dom
     // 更新事件逻辑：将事件代理到每一级rosetta element的根root上，保存一份old已绑定事件，方便update的时候diff增加；当根节点上事件触发的时候，通过evstore查找当前dom上是否有对应事件的callback，如果有则执行，否则递归到parent；阻止冒泡（update的时候将当前的和old进行diff绑定diff的）
     // 更新内部ref逻辑：将ref属性设置到节点的attribute上，已经有dom的时候query一下ref=xxx获得dom，然后更新$
@@ -245,6 +285,7 @@ function ready(cb, ifOnce) {
     }
 }
 
+
 /*
  *
  *
@@ -258,12 +299,20 @@ function getElemClass(type) {
     return _elemClass[type];
 }
 
+/*
+ * @function
+ *
+ */
 function setElemClass(type, newClass) {
     if (!!type && !!newClass) {
         _elemClass[type] = newClass;
     }
 }
 
+/*
+ * @function
+ *
+ */
 function getRef(key, value) {
     if (!key) {
         return;
@@ -271,77 +320,12 @@ function getRef(key, value) {
     return _refers[key];
 }
 
+/*
+ * @function
+ *
+ */
 function setRef(key, value) {
     if (!!key && !!value) {
         _refers[key] = value;
-    }
-}
-
-/**
- * @function attributeToProperty
- * @param name
- * @param value
- */
-function attributeToProperty(name, value) {
-    if (name) {
-        var item = this.properties[name] || String;
-        var supportType = [Boolean, Date, Number, String, Array, Object];
-        var index = supportType.indexOf(item);
-        var typeFunc = supportType[index];
-        var currentValue = this[name] || null;
-
-        if (index < 0) {
-            var typeFunc = item.type;
-        }
-
-
-        if (!(typeof typeFunc() == typeof value)) {
-            // deserialize Boolean or Number values from attribute
-            value = deserializeValue(value, typeFunc, currentValue);
-        }
-
-        // only act if the value has changed
-        if (value !== currentValue) {
-            if (isPlainObject(value)) {
-                var configValue = extend({}, value, true);
-            }
-
-            this.__config[name] = configValue;
-            this[name] = value;
-        }
-
-        return value;
-  }
-}
-
-/*
- * @function handleAttr: change attributes to goal structure, if !!rosettaObj then change attributes to real value according to properties' type
- * @param {json} attr: attributes of elements
- * @param {object} rosettaObj: rosetta element instance
- */
-function handleAttr(attr, rosettaObj) {
-    // 处理attributes，转换为attr和事件分离的格式；如果需要toRealType，则转换类型（比较消耗性能）
-    var eventObj = {};
-    var events = [];
-
-    for (var name in attr) {
-        var item = attr[name];
-
-        if (!!rosettaObj) {
-            attr[name] = attributeToProperty.call(this, name, item);
-        }
-
-        if (supportEvent[name]) {
-            eventObj['ev-' + supportEvent[name]] = item;
-            events.push(supportEvent[name]);
-            delete attr[name];
-        }
-    }
-
-
-    return {
-        eventObj,
-        attr,
-        events
     }
 }

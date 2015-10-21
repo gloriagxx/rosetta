@@ -1,6 +1,6 @@
 import {extend, isFunction, isPlainObject, isDomNode} from './utils.js';
 import {ATTACHED, DETACHED, CREATED, ATTRIBUTECHANGE} from './lifeEvents.js';
-import {bind, trigger} from './elementUtils.js';
+import {bind, trigger, handleEvent} from './elementUtils.js';
 import supportEvent from './supportEvent.js';
 
 
@@ -96,13 +96,10 @@ function update(opts) {
     this.vTree.rObj = oldTree.rObj;
 
     // 更新ref的引用
+    updateRefs(rObj);
 
-
-    // 移除旧的事件绑定
-
-
-    // 更新事件代理
-
+    // 更新事件代理(不用移除旧的事件绑定)
+    handleEvent(rObj);
 
     // 执行attributechange相关逻辑
     triggerChildren(this, ATTRIBUTECHANGE);
@@ -149,10 +146,14 @@ function create(elemType, attr) {
     // 如果该字节点为rosettaElement，则存储生成的字节点的到父节点this的rosettaElems中存起来
     if (!!vTree && !!vTree.rObj && vTree.rObj.isRosettaElem == true) {
         // 将子节点为rosettaElem的放到rosettaChildren里
+        // 根element需要知道内嵌子element
         this.rosettaChildren[vTree.rObj.elemID] = vTree.rObj;
-    } else {
-        // 将子节点处理的事件保存到this上，作为rosetta element需要为子节点代理的事件
 
+        // 内嵌子element需要知道嵌套中的根element
+        vTree.rObj.parentObj = this;
+    } else {
+        // 将非rosetta element的子节点处理的事件保存到this上，作为rosetta element需要为子节点代理的事件；暂时不支持嵌套时的rosetta标签绑定事件的写法
+        extend(this.shouldDelegateEvents, vTree.__events, true);
     }
 
     return vTree;
@@ -191,7 +192,7 @@ export default function elementClassFactory(prototypeOpts) {
 
                 'rosettaChildren': {},
 
-                'shouldDelegateEvents': []
+                'shouldDelegateEvents': {}
 
             }, true);
 
