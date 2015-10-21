@@ -321,7 +321,6 @@ function handleContent(rObj, _shouldReplacedContent) {
         var parent = getParent(content) || rObj.root;
         var num = parent.getAttribute('shouldReplacedContent');
         var children = _shouldReplacedContent[parseInt(num)];
-
         var newWrapper = document.createElement('div');
         newWrapper.setAttribute('class', 'content');
 
@@ -1017,6 +1016,7 @@ function create(type, initAttr) {
             // 疑似bug，需要重点单测
             _shouldReplacedContent.push(children);
             vTree.properties.attributes.shouldReplacedContent = _shouldReplacedContent.length - 1;
+            vTree.properties.attributes.isRosettaElem = true;
         }
 
         //vtree和robj相互引用，方便后面获取
