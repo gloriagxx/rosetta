@@ -1,5 +1,5 @@
 import '../../lib/shims.js';
-import * as utils from '../../es6lib/utils.js';
+import * as utils from '../../lib/utils.js';
 
 var typeCases = [
     '1',

@@ -315,9 +315,11 @@ function appendRoot(dom, parent, ifReplace) {
  * @param {array} contents contains children dom as an array
  */
 
-function handleContent(contents, _shouldReplacedContent) {
+function handleContent(rObj, _shouldReplacedContent) {
+    var contents = query('content', rObj.root);
+
     (contents || []).map(function (content, index) {
-        var parent = getParent(content);
+        var parent = getParent(content) || rObj.root;
         var num = parent.getAttribute('shouldReplacedContent');
         var children = _shouldReplacedContent[parseInt(num)];
 
@@ -1058,9 +1060,8 @@ function render(vTree, parentDOM, ifReplace) {
 
     if (!!rObj && rObj.isRosettaElem == true) {
         rObj.root = dom;
-        var contents = (0, _elementUtilsJs.query)('content', rObj.root);
         // 处理content
-        (0, _elementUtilsJs.handleContent)(contents, _shouldReplacedContent);
+        (0, _elementUtilsJs.handleContent)(rObj, _shouldReplacedContent);
         // 疑似bug
         _shouldReplacedContent = [];
         // 更新内部dom节点的ref

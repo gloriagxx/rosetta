@@ -17,14 +17,14 @@ module.exports = function(config) {
         files: [{
             pattern: 'test/unit/*.js'
         }, {
-            pattern: 'es6lib/utils.js'
+            pattern: 'lib/utils.js'
         }],
 
         // preprocess matching files before serving them to the browser
         // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
         preprocessors: {
             'test/unit/*.js': ['browserify'],
-            'es6lib/utils.js': ['browserify']
+            'lib/utils.js': ['browserify']
         },
 
         browserify: {

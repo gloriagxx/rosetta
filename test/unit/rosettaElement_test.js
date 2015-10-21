@@ -1,5 +1,5 @@
 import '../../lib/shims.js';
-import elementClassFactory from '../../es6lib/rosettaElement.js';
+import elementClassFactory from '../../lib/rosettaElement.js';
 
 
 describe('rosetta element test', () => {
