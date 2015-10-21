@@ -1070,19 +1070,22 @@ function render(vTree, parentDOM, ifReplace) {
         // 更新自己的ref到rosetta
         setRef(rObj.__config.ref, rObj);
 
+        // 派发element的ready事件（已经有dom，但是并未appedn到父节点上）
+        (0, _elementUtilsJs.triggerChildren)(rObj, 'ready');
+        rObj.ready.call(rObj);
+        rObj.fire('ready', rObj);
+
         // 更新dom
         (0, _elementUtilsJs.appendRoot)(dom, parentDOM, ifReplace);
         // 更新内部rosetta element instance的root（render前都是虚拟dom，嵌套的子element实际没有dom类型的root）
         (0, _elementUtilsJs.updateChildElemRoot)(rObj);
         // 处理事件绑定: 遍历每个子rosetta element绑定事件，绑定自己的事情
         (0, _elementUtilsJs.handleEvent)(rObj);
-        // 派发element的ready事件（已经有dom，但是并未appedn到父节点上）
-        (0, _elementUtilsJs.triggerChildren)(rObj, 'ready');
 
         // 派发attached事件相关
         (0, _elementUtilsJs.triggerChildren)(rObj, _lifeEventsJs.ATTACHED);
-        rObj.fire(_lifeEventsJs.ATTACHED, rObj);
         rObj.attached.call(rObj);
+        rObj.fire(_lifeEventsJs.ATTACHED, rObj);
         return rObj;
     } else {
         // 处理事件代理
@@ -1332,8 +1335,8 @@ function update(opts) {
 
     // 执行attributechange相关逻辑
     (0, _elementUtilsJs.triggerChildren)(this, _lifeEventsJs.ATTRIBUTECHANGE);
-    this.fire(_lifeEventsJs.ATTRIBUTECHANGE, this);
     this.attributeChanged.call(this);
+    this.fire(_lifeEventsJs.ATTRIBUTECHANGE, this);
 }
 
 /**
@@ -1350,9 +1353,9 @@ function destroy() {
 
     // 触发dettached相关事件
     (0, _elementUtilsJs.triggerChildren)(this, _lifeEventsJs.DETACHED);
+    this.dettached.call(this);
     this.fire(_lifeEventsJs.DETACHED, this);
     this.isAttached = false;
-    this.dettached.call(this);
 }
 
 /**
