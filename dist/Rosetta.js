@@ -352,31 +352,37 @@ function handleContent(contents, _shouldReplacedContent) {
  */
 
 function handleEvent(obj) {
+    function bindEvent(childObj) {
+        var events = childObj.shouldDelegateEvents;
+
+        for (var type in events) {
+            (function (eventName, ifBinded, itemObj) {
+                var root = itemObj.root;
+
+                var cb = function cb(e) {
+                    eventRealCB(e, itemObj);
+                };
+
+                if (ifBinded === 0) {
+                    if (root.addEventListener) {
+                        root.addEventListener(eventName, cb, false);
+                    } else {
+                        root.attachEvent('on' + eventName, cb);
+                    }
+                }
+            })(type, events[type], childObj);
+
+            events[type] = 1;
+        }
+    }
+
+    bindEvent(obj);
     // 遍历每个子element
     (obj.rosettaChildren || []).map(function (childItem) {
         (function (childID, childObj) {
             // 每个子element需要代理的事件
-            var events = childObj.shouldDelegateEvents;
 
-            for (var type in events) {
-                (function (eventName, ifBinded, itemObj) {
-                    var root = itemObj.root;
-
-                    var cb = function cb(e) {
-                        eventRealCB(e, itemObj);
-                    };
-
-                    if (ifBinded === 0) {
-                        if (root.addEventListener) {
-                            root.addEventListener(eventName, cb, false);
-                        } else {
-                            root.attachEvent('on' + eventName, cb);
-                        }
-                    }
-                })(type, events[type], childObj);
-                events[type] = 1;
-            }
-
+            bindEvent(childObj);
             // 对每个子element的root进行事件绑定，并阻止冒泡
         })(childItem.id, childItem.obj);
     });
