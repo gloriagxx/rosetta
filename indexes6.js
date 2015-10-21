@@ -1,4 +1,4 @@
-var es5shim = require('./lib/shims.js');
+require('./lib/shims.js');
 var Rosetta = require('./lib/rosetta.js');
 var readyRE = /complete/;
 

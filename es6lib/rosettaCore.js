@@ -28,51 +28,6 @@ var _elemClass = {};
 var _shouldReplacedContent = [];
 
 
-
-/**
- *
- * @param {json} options - options for prototype of custom element
- * @example, if it has no default value, then the value can be String/Object/
-    {
-        is: 'r-xxx'
-        ready: function() {}
-        created: function() {}
-        attached: function() {}
-        dettached: function() {}
-        attributeChanged: function() {}
-        extends: 'type name'
-        properties: {
-            aaa: 'string',//used for deserializezing from an attribute
-            bbb: [],
-            prop: {
-                type: String,
-                notify: true,
-                readOnly: true
-            }
-        }
-    }
- * @param options.properties.xxx.type - Boolean, Date, Number, String, Array or Object
- * @param options.properties.xxx.value - boolean, number, string or function
- * String. No serialization required.
- * Date or Number. Serialized using  toString.
- * Boolean. Results in a non-valued attribute to be either set (true) or removed (false).
- * Array or Object. Serialized using JSON.stringify.
- *
- */
-function Rosetta(opts) {
-    // 组件注册接口
-    // 创建新的组件class
-    // 标记异步import加载器的该类型组件class已经定义
-    // 返回类型为创建的新组件class
-    var type = opts.is;
-    var newClass = elementClassFactory(opts);
-
-    setElemClass(type, newClass);
-    htmlImport.factoryMap[opts.__rid] = true;
-    return newClass;
-}
-
-
 function findRosettaTag() {
     var elems = [];
     if (!!document.getElementsByClassName) {
@@ -142,7 +97,10 @@ function create(type, initAttr = {}) {
     if (isOriginalTag(type)) {
         // 将initAttr转换为对应this.properties的type的attr真实值，并处理好vtree要求的事件属性格式
         // 生成vtree
-        {attr, elemObj, events} = handleAttr(initAttr);
+        var result = handleAttr(initAttr);
+        var attr = result.attr;
+        var eventObj = result.eventObj;
+        var events = result.events;
 
         var newAttr = extend({
             attributes: attr
@@ -168,8 +126,10 @@ function create(type, initAttr = {}) {
         // 设置name为initAttr.ref的值
         elemObj.name = initAttr.ref ? initAttr.ref && ref(initAttr.ref, elemObj) : '';
         // 将initAttr转换为对应this.properties的type的attr真实值，并处理好vtree要求的事件属性格式
-        {attr, elemObj, events} = handleAttr(initAttr, elemObj);
-        // 设置id，设置elem实例的property为attribute
+        var result = handleAttr(initAttr, elemObj);
+        var attr = result.attr;
+        var eventObj = result.eventObj;
+        var events = result.events;        // 设置id，设置elem实例的property为attribute
         attr.elemID = elemID;
 
         // 生成vtree
@@ -211,7 +171,7 @@ function create(type, initAttr = {}) {
  */
 function render(vTree, parentDOM, ifReplace) {
     // 如果没有参数，表示全document渲染dom
-    if (！vTree) {
+    if (!vTree) {
         init();
         return;
     }
@@ -331,3 +291,63 @@ function setRef(key, value) {
         _refers[key] = value;
     }
 }
+
+
+
+/**
+ *
+ * @param {json} options - options for prototype of custom element
+ * @example, if it has no default value, then the value can be String/Object/
+    {
+        is: 'r-xxx'
+        ready: function() {}
+        created: function() {}
+        attached: function() {}
+        dettached: function() {}
+        attributeChanged: function() {}
+        extends: 'type name'
+        properties: {
+            aaa: 'string',//used for deserializezing from an attribute
+            bbb: [],
+            prop: {
+                type: String,
+                notify: true,
+                readOnly: true
+            }
+        }
+    }
+ * @param options.properties.xxx.type - Boolean, Date, Number, String, Array or Object
+ * @param options.properties.xxx.value - boolean, number, string or function
+ * String. No serialization required.
+ * Date or Number. Serialized using  toString.
+ * Boolean. Results in a non-valued attribute to be either set (true) or removed (false).
+ * Array or Object. Serialized using JSON.stringify.
+ *
+ */
+export default function Rosetta(opts) {
+    // 组件注册接口
+    // 创建新的组件class
+    // 标记异步import加载器的该类型组件class已经定义
+    // 返回类型为创建的新组件class
+    var type = opts.is;
+    var newClass = elementClassFactory(opts);
+
+    setElemClass(type, newClass);
+    htmlImport.factoryMap[opts.__rid] = true;
+    return newClass;
+}
+
+extend(Rosetta, {
+    'ref': ref,
+
+    'render': render,
+
+    'create': create,
+
+    'ready': ready,
+
+    'import': htmlImport,
+
+    'config': htmlImport.resourceMap
+});
+
