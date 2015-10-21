@@ -355,6 +355,7 @@ function handleContent(rObj, _shouldReplacedContent) {
 
 function handleEvent(obj) {
     function bindEvent(childObj) {
+        // 每个子element需要代理的事件
         var events = childObj.shouldDelegateEvents;
 
         for (var type in events) {
@@ -378,16 +379,17 @@ function handleEvent(obj) {
         }
     }
 
-    bindEvent(obj);
-    // 遍历每个子element
-    (obj.rosettaChildren || []).map(function (childItem) {
-        (function (childID, childObj) {
-            // 每个子element需要代理的事件
+    function handleChildren(obj) {
+        bindEvent(obj);
+        // 遍历每个子element
+        (obj.rosettaChildren || []).map(function (childItem) {
+            (function (childObj) {
+                handleChildren(childObj);
+            })(childItem.obj);
+        });
+    }
 
-            bindEvent(childObj);
-            // 对每个子element的root进行事件绑定，并阻止冒泡
-        })(childItem.id, childItem.obj);
-    });
+    handleChildren(obj);
 }
 
 function eventRealCB(e, obj) {
