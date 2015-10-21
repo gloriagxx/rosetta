@@ -5,7 +5,7 @@
  * @exports supportEvent
  */
 
-export default supportEvent = {
+export var supportEvent = {
     // 只支持原生的
     onClick: 'click',
     onDoubleClick: 'doubleclick',

@@ -201,6 +201,9 @@ export function toPlainArray(data) {
         if (isArray(item)) {
             result = result.concat(toPlainArray(item));
         } else {
+            if (typeof item == 'number') {
+                item += '';
+            }
             result.push(item);
         }
     }

@@ -1,8 +1,14 @@
 import {extend, isFunction, isPlainObject, isDomNode} from './utils.js';
 import {ATTACHED, DETACHED, CREATED, ATTRIBUTECHANGE} from './lifeEvents.js';
-import {bind, trigger, handleEvent} from './elementUtils.js';
-import supportEvent from './supportEvent.js';
+import {bind, trigger, handleEvent, updateRefs, triggerChildren} from './elementUtils.js';
+import {supportEvent} from './supportEvent.js';
 
+
+// vdom relavent
+import h from 'virtual-dom/h';
+import createElement from 'virtual-dom/create-element';
+import diff from 'virtual-dom/diff'
+import patch from 'virtual-dom/patch'
 
 /**
  * @function for event binding
@@ -48,9 +54,10 @@ function fire(eventName) {
 /**
  *
  * @function for update rosetta element instance properties and rerendering UI
- * @param {object} options - new value of properties for updating
+ * @param {object} opts - new value of properties for updating
  */
 function update(opts) {
+    var rObj = this;
     var oldTree = this.vTree;
     var rootNode = this.root;
     var type = this.type;
@@ -60,7 +67,7 @@ function update(opts) {
 
     // 判断是不是更新的数据和已有的数据存在不同
     for (var key in opts) {
-        if (this.__config[key] != options[i]) {
+        if (this.__config[key] != opts[key]) {
             flag = true;
             break;
         }
@@ -91,9 +98,9 @@ function update(opts) {
 
 
     // 更新树
-    this.root = patch(this.root, patches);
+    this.root = patch(rootNode, patches);
     this.vTree = newTree;
-    this.vTree.rObj = oldTree.rObj;
+    this.vTree.rObj = rObj;
 
     // 更新ref的引用
     updateRefs(rObj);
@@ -143,7 +150,7 @@ function create(elemType, attr) {
         this.$[attr.ref] = vTree;
     }
 
-    // 如果该字节点为rosettaElement，则存储生成的字节点的到父节点this的rosettaElems中存起来
+    // 如果该字节点为rosettaElement，则存储生成的字节点的到父节点this的rosettaChildren中存起来
     if (!!vTree && !!vTree.rObj && vTree.rObj.isRosettaElem == true) {
         // 将子节点为rosettaElem的放到rosettaChildren里
         // 根element需要知道内嵌子element

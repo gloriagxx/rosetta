@@ -1,3 +1,8 @@
+import {isPlainObject, deserializeValue} from './utils.js';
+import {supportEvent} from './supportEvent.js';
+import EvStore from "ev-store";
+
+
 /**
  *
  * @module query
@@ -98,8 +103,8 @@ export function updateRefs(obj) {
  * @param {string} type - event name
  */
 export function triggerChildren(obj, type) {
-    for (var key in obj.rosettaElems) {
-        var item = obj.rosettaElems[key];
+    for (var key in obj.rosettaChildren) {
+        var item = obj.rosettaChildren[key];
         triggerChildren(item, type);
         item[type].call(item);
         item.fire(type, item);
@@ -176,7 +181,7 @@ export function handleAttr(attr, rosettaObj) {
         var item = attr[name];
 
         if (!!rosettaObj) {
-            attr[name] = attributeToProperty.call(this, name, item);
+            attr[name] = attributeToProperty.call(rosettaObj, name, item);
         }
 
         if (supportEvent[name]) {
@@ -200,14 +205,18 @@ export function handleAttr(attr, rosettaObj) {
  *
  */
 export function updateChildElemRoot(obj) {
-    var rosettaElems = obj.rosettaElems;
+    console.log('updateChildElemRoot type :: ', obj.type);
+    var rosettaChildren = obj.rosettaChildren;
     var root = obj.root;
 
-    for (var id in rosettaElems) {
-        var item = rosettaElems[id];
+    for (var id in rosettaChildren) {
+        var item = rosettaChildren[id];
 
         var dom = query('[elemID="' + id + '"]', root);
         item.root = dom[0];
+        console.log('updateChildElemRoot root :: ', dom[0]);
+
+        updateChildElemRoot(item);
     }
 }
 
@@ -216,15 +225,15 @@ export function updateChildElemRoot(obj) {
  *
  */
 export function appendRoot(dom, parent, ifReplace) {
-    var classes = root.getAttribute('class');
+    var classes = parent.getAttribute('class');
 
     if (ifReplace == true) {
         var v = dom.getAttribute('class');
         dom.setAttribute('class', (v + ' ' + classes).replace(/r-invisible/g, ''));
-        root.parentElement.replaceChild(dom, root);
+        parent.parentElement.replaceChild(dom, parent);
     } else {
-        root.appendChild(dom);
-        root.setAttribute('class', classes.replace(/r-invisible/g, ''));
+        parent.appendChild(dom);
+        parent.setAttribute('class', classes.replace(/r-invisible/g, ''));
     }
 }
 
@@ -270,11 +279,11 @@ export function handleContent(contents, _shouldReplacedContent) {
  */
 export function handleEvent(obj) {
     // 遍历每个子element
-    for (var id in obj.rosettaElems) {
+    for (var id in obj.rosettaChildren) {
         ((childID, childObj) => {
             // 每个子element需要代理的事件
-            var events = childObj.__events;
-
+            var events = childObj.shouldDelegateEvents;
+            console.log(events);
             for (var type in events) {
                 (function(eventName, ifBinded, obj) {
                     var root = obj.root;
@@ -298,7 +307,7 @@ export function handleEvent(obj) {
             }
 
             // 对每个子element的root进行事件绑定，并阻止冒泡
-        })(id, obj.rosettaElems[id])
+        })(id, obj.rosettaChildren[id])
     }
 }
 

@@ -1,5 +1,6 @@
-require('./lib/shims.js');
-var Rosetta = require('./lib/rosetta.js');
+import Rosetta from './es6lib/rosettaCore.js';
+
+require('./es6lib/shims.js');
 var readyRE = /complete/;
 
 function ready(callback) {
@@ -9,7 +10,7 @@ function ready(callback) {
         if (!document.addEventListener) {
             window.attachEvent('onload', callback);
         } else {
-            document.addEventListener('DOMContentLoaded', ()=> {
+            document.addEventListener('DOMContentLoaded', () => {
                 callback();
             }, false);
         }

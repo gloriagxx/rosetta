@@ -1,4 +1,10 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/**
+ *
+ * @module query
+ * @param {string} selector - the selector string for the wanted DOM
+ * @param {HTMLNode} element - the scope in which selector will be seached in
+ */
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -16,23 +22,6 @@ exports.updateChildElemRoot = updateChildElemRoot;
 exports.appendRoot = appendRoot;
 exports.handleContent = handleContent;
 exports.handleEvent = handleEvent;
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var _utilsJs = require('./utils.js');
-
-var _supportEventJs = require('./supportEvent.js');
-
-var _evStore = require("ev-store");
-
-var _evStore2 = _interopRequireDefault(_evStore);
-
-/**
- *
- * @module query
- * @param {string} selector - the selector string for the wanted DOM
- * @param {HTMLNode} element - the scope in which selector will be seached in
- */
 
 function query(selector, element) {
     var found,
@@ -123,8 +112,8 @@ function updateRefs(obj) {
  */
 
 function triggerChildren(obj, type) {
-    for (var key in obj.rosettaChildren) {
-        var item = obj.rosettaChildren[key];
+    for (var key in obj.rosettaElems) {
+        var item = obj.rosettaElems[key];
         triggerChildren(item, type);
         item[type].call(item);
         item.fire(type, item);
@@ -179,12 +168,12 @@ function attributeToProperty(name, value) {
 
         if (!(typeof typeFunc() == typeof value)) {
             // deserialize Boolean or Number values from attribute
-            value = (0, _utilsJs.deserializeValue)(value, typeFunc, currentValue);
+            value = deserializeValue(value, typeFunc, currentValue);
         }
 
         // only act if the value has changed
         if (value !== currentValue) {
-            if ((0, _utilsJs.isPlainObject)(value)) {
+            if (isPlainObject(value)) {
                 var configValue = extend({}, value, true);
             }
 
@@ -211,12 +200,12 @@ function handleAttr(attr, rosettaObj) {
         var item = attr[name];
 
         if (!!rosettaObj) {
-            attr[name] = attributeToProperty.call(rosettaObj, name, item);
+            attr[name] = attributeToProperty.call(this, name, item);
         }
 
-        if (_supportEventJs.supportEvent[name]) {
-            eventObj['ev-' + _supportEventJs.supportEvent[name]] = item;
-            events[_supportEventJs.supportEvent[name]] = 0; // root element代理之后设置为true
+        if (supportEvent[name]) {
+            eventObj['ev-' + supportEvent[name]] = item;
+            events[supportEvent[name]] = 0; // root element代理之后设置为true
             delete attr[name];
         }
     }
@@ -234,18 +223,14 @@ function handleAttr(attr, rosettaObj) {
  */
 
 function updateChildElemRoot(obj) {
-    console.log('updateChildElemRoot type :: ', obj.type);
-    var rosettaChildren = obj.rosettaChildren;
+    var rosettaElems = obj.rosettaElems;
     var root = obj.root;
 
-    for (var id in rosettaChildren) {
-        var item = rosettaChildren[id];
+    for (var id in rosettaElems) {
+        var item = rosettaElems[id];
 
         var dom = query('[elemID="' + id + '"]', root);
         item.root = dom[0];
-        console.log('updateChildElemRoot root :: ', dom[0]);
-
-        updateChildElemRoot(item);
     }
 }
 
@@ -255,15 +240,15 @@ function updateChildElemRoot(obj) {
  */
 
 function appendRoot(dom, parent, ifReplace) {
-    var classes = parent.getAttribute('class');
+    var classes = root.getAttribute('class');
 
     if (ifReplace == true) {
         var v = dom.getAttribute('class');
         dom.setAttribute('class', (v + ' ' + classes).replace(/r-invisible/g, ''));
-        parent.parentElement.replaceChild(dom, parent);
+        root.parentElement.replaceChild(dom, root);
     } else {
-        parent.appendChild(dom);
-        parent.setAttribute('class', classes.replace(/r-invisible/g, ''));
+        root.appendChild(dom);
+        root.setAttribute('class', classes.replace(/r-invisible/g, ''));
     }
 }
 
@@ -310,11 +295,11 @@ function handleContent(contents, _shouldReplacedContent) {
 
 function handleEvent(obj) {
     // 遍历每个子element
-    for (var id in obj.rosettaChildren) {
+    for (var id in obj.rosettaElems) {
         (function (childID, childObj) {
             // 每个子element需要代理的事件
-            var events = childObj.shouldDelegateEvents;
-            console.log(events);
+            var events = childObj.__events;
+
             for (var type in events) {
                 (function (eventName, ifBinded, obj) {
                     var root = obj.root;
@@ -337,7 +322,7 @@ function handleEvent(obj) {
             }
 
             // 对每个子element的root进行事件绑定，并阻止冒泡
-        })(id, obj.rosettaChildren[id]);
+        })(id, obj.rosettaElems[id]);
     }
 }
 
@@ -350,7 +335,7 @@ function eventRealCB(e, obj) {
             return;
         }
 
-        var realCallback = (0, _evStore2['default'])(parent)[e.type];
+        var realCallback = EvStore(parent)[e.type];
         if (!!realCallback) {
             realCallback.call(obj, e);
         } else {
@@ -362,7 +347,7 @@ function eventRealCB(e, obj) {
     findCB(parent);
 }
 
-},{"./supportEvent.js":8,"./utils.js":9,"ev-store":12}],2:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 /**
  *
  *  file: htmlimport.js
@@ -373,10 +358,6 @@ function eventRealCB(e, obj) {
 
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
-    value: true
-});
-exports.htmlImport = htmlImport;
 var head = document.getElementsByTagName('head')[0],
     resMap = {},
     pkgMap = {},
@@ -527,7 +508,6 @@ function createCSS(url, id, onerror) {
  * @param {array} urls - Array of resources to be loaded
  *
  */
-
 function htmlImport(urls, onload, onerror) {
     if (typeof urls == 'string') {
         urls = [urls];
@@ -604,6 +584,8 @@ function loadScript(id, callback, onerror) {
 
 htmlImport.factoryMap = factoryMap;
 htmlImport.resourceMap = resourceMap;
+
+module.exports = htmlImport;
 
 },{}],3:[function(require,module,exports){
 'use strict';
@@ -792,7 +774,11 @@ var _lifeEventsJs = require('./lifeEvents.js');
 
 var _htmlImport = require('./htmlImport');
 
+var _htmlImport2 = _interopRequireDefault(_htmlImport);
+
 var _supportEventJs = require('./supportEvent.js');
+
+var _supportEventJs2 = _interopRequireDefault(_supportEventJs);
 
 var _utilsJs = require('./utils.js');
 
@@ -807,6 +793,10 @@ var _virtualDomH2 = _interopRequireDefault(_virtualDomH);
 var _virtualDomCreateElement = require('virtual-dom/create-element');
 
 var _virtualDomCreateElement2 = _interopRequireDefault(_virtualDomCreateElement);
+
+var _evStore = require("ev-store");
+
+var _evStore2 = _interopRequireDefault(_evStore);
 
 // define private instances
 var _allRendered = false; // 调用init的开始置为false，本次渲染所有组件render完毕就是true；如果存在因未定义而未渲染的也算作是true，因此可以理解为“本次符合渲染条件的都渲染完了”
@@ -862,7 +852,7 @@ function init() {
     }
 
     _allRendered = true;
-    _elementUtilsJs.trigger.call(Rosetta, 'ready');
+    _utilsJs.fire.call(Rosetta, 'ready');
 }
 
 /*
@@ -871,12 +861,12 @@ function init() {
  * @param {object} initArr, attributes of the newly created element
  * @return {object} vTree, contains referer of rosetta instance
  */
-function create(type, initAttr) {
+function create(type) {
+    var initAttr = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+
     if (!(0, _utilsJs.isString)(type)) {
         return;
     }
-
-    initAttr = initAttr || {};
 
     var children = [].slice.call(arguments, 2);
     children = (0, _utilsJs.toPlainArray)(children);
@@ -900,9 +890,9 @@ function create(type, initAttr) {
         return vTree;
     } else {
         // 查找是否存在class
-        var ElemClass = getElemClass(type);
+        var ElemClass = getElemClass[type];
         if (!ElemClass) {
-            return false;
+            return;
         }
 
         // 生成rosetta elem的id
@@ -912,17 +902,16 @@ function create(type, initAttr) {
         var elemObj = new ElemClass();
 
         // 设置name为initAttr.ref的值
-        elemObj.name = initAttr.ref ? initAttr.ref : '';
+        elemObj.name = initAttr.ref ? initAttr.ref && ref(initAttr.ref, elemObj) : '';
         // 将initAttr转换为对应this.properties的type的attr真实值，并处理好vtree要求的事件属性格式
         var result = (0, _elementUtilsJs.handleAttr)(initAttr, elemObj);
         var attr = result.attr;
         var eventObj = result.eventObj;
         var events = result.events; // 设置id，设置elem实例的property为attribute
-        elemObj.elemID = elemID;
+        attr.elemID = elemID;
 
         // 生成vtree
         vTree = elemObj.__t(elemObj, elemObj.$);
-        vTree.properties.attributes.elemID = elemID;
 
         // 处理children，将children存起来，方便根节点render的时候统一处理children content的事情
         if (children) {
@@ -960,7 +949,7 @@ function create(type, initAttr) {
  */
 function render(vTree, parentDOM, ifReplace) {
     // 如果没有参数，表示全document渲染dom
-    if (vTree === undefined) {
+    if (!vTree) {
         init();
         return;
     }
@@ -981,7 +970,7 @@ function render(vTree, parentDOM, ifReplace) {
 
     if (!!rObj && rObj.isRosettaElem == true) {
         rObj.root = dom;
-        var contents = (0, _elementUtilsJs.query)('content', rObj.root);
+        var contents = (0, _utilsJs.query)('content', rObj.root);
         // 处理content
         (0, _elementUtilsJs.handleContent)(contents, _shouldReplacedContent);
         // 疑似bug
@@ -995,7 +984,7 @@ function render(vTree, parentDOM, ifReplace) {
         // 处理事件绑定: 遍历每个子rosetta element绑定事件，绑定自己的事情
         (0, _elementUtilsJs.handleEvent)(rObj);
         // 派发element的ready事件（已经有dom，但是并未appedn到父节点上）
-        (0, _elementUtilsJs.triggerChildren)(rObj, 'ready');
+        (0, _elementUtilsJs.triggerChildren)(rObj, 'domready');
         // 更新dom
         (0, _elementUtilsJs.appendRoot)(dom, parentDOM, ifReplace);
         // 派发attached事件相关
@@ -1026,9 +1015,9 @@ function ready(cb, ifOnce) {
         ifOnce = ifOnce === true ? true : false;
         if (_allRendered == true) {
             cb();
-            !ifOnce && _elementUtilsJs.bind.call(Rosetta, 'ready', cb, null, ifOnce);
+            !ifOnce && _utilsJs.bind.call(Rosetta, 'ready', cb, null, ifOnce);
         } else {
-            _elementUtilsJs.bind.call(Rosetta, 'ready', cb, null, ifOnce);
+            _utilsJs.bind.call(Rosetta, 'ready', cb, null, ifOnce);
         }
     }
 }
@@ -1116,26 +1105,28 @@ function Rosetta(opts) {
     var newClass = (0, _rosettaElementJs2['default'])(opts);
 
     setElemClass(type, newClass);
-    _htmlImport.htmlImport.factoryMap[opts.__rid] = true;
+    _htmlImport2['default'].factoryMap[opts.__rid] = true;
     return newClass;
 }
 
 (0, _utilsJs.extend)(Rosetta, {
-    'ref': getRef,
+    'ref': ref,
 
-    render: render,
-    create: create,
-    ready: ready,
+    'render': render,
 
-    'import': _htmlImport.htmlImport,
+    'create': create,
 
-    'config': _htmlImport.htmlImport.resourceMap
+    'ready': ready,
+
+    'import': _htmlImport2['default'],
+
+    'config': _htmlImport2['default'].resourceMap
 });
 
 exports['default'] = Rosetta;
 module.exports = exports['default'];
 
-},{"./elementUtils.js":1,"./htmlImport":2,"./lifeEvents.js":3,"./rosettaElement.js":6,"./supportEvent.js":8,"./utils.js":9,"virtual-dom/create-element":15,"virtual-dom/h":17}],6:[function(require,module,exports){
+},{"./elementUtils.js":1,"./htmlImport":2,"./lifeEvents.js":3,"./rosettaElement.js":6,"./supportEvent.js":7,"./utils.js":8,"ev-store":10,"virtual-dom/create-element":13,"virtual-dom/h":14}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1155,23 +1146,7 @@ var _elementUtilsJs = require('./elementUtils.js');
 
 var _supportEventJs = require('./supportEvent.js');
 
-// vdom relavent
-
-var _virtualDomH = require('virtual-dom/h');
-
-var _virtualDomH2 = _interopRequireDefault(_virtualDomH);
-
-var _virtualDomCreateElement = require('virtual-dom/create-element');
-
-var _virtualDomCreateElement2 = _interopRequireDefault(_virtualDomCreateElement);
-
-var _virtualDomDiff = require('virtual-dom/diff');
-
-var _virtualDomDiff2 = _interopRequireDefault(_virtualDomDiff);
-
-var _virtualDomPatch = require('virtual-dom/patch');
-
-var _virtualDomPatch2 = _interopRequireDefault(_virtualDomPatch);
+var _supportEventJs2 = _interopRequireDefault(_supportEventJs);
 
 /**
  * @function for event binding
@@ -1217,10 +1192,9 @@ function fire(eventName) {
 /**
  *
  * @function for update rosetta element instance properties and rerendering UI
- * @param {object} opts - new value of properties for updating
+ * @param {object} options - new value of properties for updating
  */
 function update(opts) {
-    var rObj = this;
     var oldTree = this.vTree;
     var rootNode = this.root;
     var type = this.type;
@@ -1229,7 +1203,7 @@ function update(opts) {
 
     // 判断是不是更新的数据和已有的数据存在不同
     for (var key in opts) {
-        if (this.__config[key] != opts[key]) {
+        if (this.__config[key] != options[i]) {
             flag = true;
             break;
         }
@@ -1255,21 +1229,21 @@ function update(opts) {
         elemID: oldAttrs.elemID
     }, true);
 
-    var patches = (0, _virtualDomDiff2['default'])(oldTree, newTree);
+    var patches = diff(oldTree, newTree);
 
     // 更新树
-    this.root = (0, _virtualDomPatch2['default'])(rootNode, patches);
+    this.root = patch(this.root, patches);
     this.vTree = newTree;
-    this.vTree.rObj = rObj;
+    this.vTree.rObj = oldTree.rObj;
 
     // 更新ref的引用
-    (0, _elementUtilsJs.updateRefs)(rObj);
+    updateRefs(rObj);
 
     // 更新事件代理(不用移除旧的事件绑定)
     (0, _elementUtilsJs.handleEvent)(rObj);
 
     // 执行attributechange相关逻辑
-    (0, _elementUtilsJs.triggerChildren)(this, _lifeEventsJs.ATTRIBUTECHANGE);
+    triggerChildren(this, _lifeEventsJs.ATTRIBUTECHANGE);
     this.fire(_lifeEventsJs.ATTRIBUTECHANGE, this);
     this.attributeChanged.call(this);
 }
@@ -1287,7 +1261,7 @@ function destroy() {
     delete Rosetta.ref(this.name);
 
     // 触发dettached相关事件
-    (0, _elementUtilsJs.triggerChildren)(this, _lifeEventsJs.DETACHED);
+    triggerChildren(this, _lifeEventsJs.DETACHED);
     this.fire(_lifeEventsJs.DETACHED, this);
     this.isAttached = false;
     this.dettached.call(this);
@@ -1310,7 +1284,7 @@ function create(elemType, attr) {
         this.$[attr.ref] = vTree;
     }
 
-    // 如果该字节点为rosettaElement，则存储生成的字节点的到父节点this的rosettaChildren中存起来
+    // 如果该字节点为rosettaElement，则存储生成的字节点的到父节点this的rosettaElems中存起来
     if (!!vTree && !!vTree.rObj && vTree.rObj.isRosettaElem == true) {
         // 将子节点为rosettaElem的放到rosettaChildren里
         // 根element需要知道内嵌子element
@@ -1428,742 +1402,7 @@ function elementClassFactory(prototypeOpts) {
 
 module.exports = exports['default'];
 
-},{"./elementUtils.js":1,"./lifeEvents.js":3,"./supportEvent.js":8,"./utils.js":9,"virtual-dom/create-element":15,"virtual-dom/diff":16,"virtual-dom/h":17,"virtual-dom/patch":25}],7:[function(require,module,exports){
-/*!
- * https://github.com/es-shims/es5-shim
- * @license es5-shim Copyright 2009-2015 by contributors, MIT License
- * see https://github.com/es-shims/es5-shim/blob/master/LICENSE
- */
-
-// vim: ts=4 sts=4 sw=4 expandtab
-
-// Add semicolon to prevent IIFE from being passed as argument to concatenated code.
-'use strict';
-
-;
-
-// UMD (Universal Module Definition)
-// see https://github.com/umdjs/umd/blob/master/returnExports.js
-(function (root, factory) {
-    'use strict';
-
-    /*global define, exports, module */
-    if (typeof define === 'function' && define.amd) {
-        // AMD. Register as an anonymous module.
-        define(factory);
-    } else if (typeof exports === 'object') {
-        // Node. Does not work with strict CommonJS, but
-        // only CommonJS-like enviroments that support module.exports,
-        // like Node.
-        module.exports = factory();
-    } else {
-        // Browser globals (root is window)
-        root.returnExports = factory();
-    }
-})(undefined, function () {
-
-    /**
-     * Brings an environment as close to ECMAScript 5 compliance
-     * as is possible with the facilities of erstwhile engines.
-     *
-     * Annotated ES5: http://es5.github.com/ (specific links below)
-     * ES5 Spec: http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-262.pdf
-     * Required reading: http://javascriptweblog.wordpress.com/2011/12/05/extending-javascript-natives/
-     */
-
-    // Shortcut to an often accessed properties, in order to avoid multiple
-    // dereference that costs universally.
-    var ArrayPrototype = Array.prototype;
-    var ObjectPrototype = Object.prototype;
-    var FunctionPrototype = Function.prototype;
-    var StringPrototype = String.prototype;
-    var NumberPrototype = Number.prototype;
-    var array_slice = ArrayPrototype.slice;
-    var array_splice = ArrayPrototype.splice;
-    var array_push = ArrayPrototype.push;
-    var array_unshift = ArrayPrototype.unshift;
-    var call = FunctionPrototype.call;
-
-    // Having a toString local variable name breaks in Opera so use to_string.
-    var to_string = ObjectPrototype.toString;
-
-    var isArray = Array.isArray || function isArray(obj) {
-        return to_string.call(obj) === '[object Array]';
-    };
-
-    var hasToStringTag = typeof Symbol === 'function' && typeof Symbol.toStringTag === 'symbol';
-    var isCallable; /* inlined from https://npmjs.com/is-callable */
-    var fnToStr = Function.prototype.toString,
-        tryFunctionObject = function tryFunctionObject(value) {
-        try {
-            fnToStr.call(value);
-            return true;
-        } catch (e) {
-            return false;
-        }
-    },
-        fnClass = '[object Function]',
-        genClass = '[object GeneratorFunction]';
-    isCallable = function isCallable(value) {
-        if (typeof value !== 'function') {
-            return false;
-        }
-        if (hasToStringTag) {
-            return tryFunctionObject(value);
-        }
-        var strClass = to_string.call(value);
-        return strClass === fnClass || strClass === genClass;
-    };
-    var isRegex; /* inlined from https://npmjs.com/is-regex */
-    var regexExec = RegExp.prototype.exec,
-        tryRegexExec = function tryRegexExec(value) {
-        try {
-            regexExec.call(value);
-            return true;
-        } catch (e) {
-            return false;
-        }
-    },
-        regexClass = '[object RegExp]';
-    isRegex = function isRegex(value) {
-        if (typeof value !== 'object') {
-            return false;
-        }
-        return hasToStringTag ? tryRegexExec(value) : to_string.call(value) === regexClass;
-    };
-    var isString; /* inlined from https://npmjs.com/is-string */
-    var strValue = String.prototype.valueOf,
-        tryStringObject = function tryStringObject(value) {
-        try {
-            strValue.call(value);
-            return true;
-        } catch (e) {
-            return false;
-        }
-    },
-        stringClass = '[object String]';
-    isString = function isString(value) {
-        if (typeof value === 'string') {
-            return true;
-        }
-        if (typeof value !== 'object') {
-            return false;
-        }
-        return hasToStringTag ? tryStringObject(value) : to_string.call(value) === stringClass;
-    };
-
-    var isArguments = function isArguments(value) {
-        var str = to_string.call(value);
-        var isArgs = str === '[object Arguments]';
-        if (!isArgs) {
-            isArgs = !isArray(value) && value !== null && typeof value === 'object' && typeof value.length === 'number' && value.length >= 0 && isCallable(value.callee);
-        }
-        return isArgs;
-    };
-
-    /* inlined from http://npmjs.com/define-properties */
-    var defineProperties = (function (has) {
-        var supportsDescriptors = Object.defineProperty && (function () {
-            try {
-                Object.defineProperty({}, 'x', {});
-                return true;
-            } catch (e) {
-                /* this is ES3 */
-                return false;
-            }
-        })();
-
-        // Define configurable, writable and non-enumerable props
-        // if they don't exist.
-        var defineProperty;
-        if (supportsDescriptors) {
-            defineProperty = function (object, name, method, forceAssign) {
-                if (!forceAssign && name in object) {
-                    return;
-                }
-                Object.defineProperty(object, name, {
-                    configurable: true,
-                    enumerable: false,
-                    writable: true,
-                    value: method
-                });
-            };
-        } else {
-            defineProperty = function (object, name, method, forceAssign) {
-                if (!forceAssign && name in object) {
-                    return;
-                }
-                object[name] = method;
-            };
-        }
-        return function defineProperties(object, map, forceAssign) {
-            for (var name in map) {
-                if (has.call(map, name)) {
-                    defineProperty(object, name, map[name], forceAssign);
-                }
-            }
-        };
-    })(ObjectPrototype.hasOwnProperty);
-
-    //
-    // Util
-    // ======
-    //
-
-    /* replaceable with https://npmjs.com/package/es-abstract /helpers/isPrimitive */
-    var isPrimitive = function isPrimitive(input) {
-        var type = typeof input;
-        return input === null || type !== 'object' && type !== 'function';
-    };
-
-    var ES = {
-        // ES5 9.4
-        // http://es5.github.com/#x9.4
-        // http://jsperf.com/to-integer
-        /* replaceable with https://npmjs.com/package/es-abstract ES5.ToInteger */
-        ToInteger: function ToInteger(num) {
-            var n = +num;
-            if (n !== n) {
-                // isNaN
-                n = 0;
-            } else if (n !== 0 && n !== 1 / 0 && n !== -(1 / 0)) {
-                n = (n > 0 || -1) * Math.floor(Math.abs(n));
-            }
-            return n;
-        },
-
-        /* replaceable with https://npmjs.com/package/es-abstract ES5.ToPrimitive */
-        ToPrimitive: function ToPrimitive(input) {
-            var val, valueOf, toStr;
-            if (isPrimitive(input)) {
-                return input;
-            }
-            valueOf = input.valueOf;
-            if (isCallable(valueOf)) {
-                val = valueOf.call(input);
-                if (isPrimitive(val)) {
-                    return val;
-                }
-            }
-            toStr = input.toString;
-            if (isCallable(toStr)) {
-                val = toStr.call(input);
-                if (isPrimitive(val)) {
-                    return val;
-                }
-            }
-            throw new TypeError();
-        },
-
-        // ES5 9.9
-        // http://es5.github.com/#x9.9
-        /* replaceable with https://npmjs.com/package/es-abstract ES5.ToObject */
-        ToObject: function ToObject(o) {
-            /*jshint eqnull: true */
-            if (o == null) {
-                // this matches both null and undefined
-                throw new TypeError("can't convert " + o + ' to object');
-            }
-            return Object(o);
-        },
-
-        /* replaceable with https://npmjs.com/package/es-abstract ES5.ToUint32 */
-        ToUint32: function ToUint32(x) {
-            return x >>> 0;
-        }
-    };
-
-    //
-    // Function
-    // ========
-    //
-
-    // ES-5 15.3.4.5
-    // http://es5.github.com/#x15.3.4.5
-
-    var Empty = function Empty() {};
-
-    defineProperties(FunctionPrototype, {
-        bind: function bind(that) {
-            // .length is 1
-            // 1. Let Target be the this value.
-            var target = this;
-            // 2. If IsCallable(Target) is false, throw a TypeError exception.
-            if (!isCallable(target)) {
-                throw new TypeError('Function.prototype.bind called on incompatible ' + target);
-            }
-            // 3. Let A be a new (possibly empty) internal list of all of the
-            //   argument values provided after thisArg (arg1, arg2 etc), in order.
-            // XXX slicedArgs will stand in for "A" if used
-            var args = array_slice.call(arguments, 1); // for normal call
-            // 4. Let F be a new native ECMAScript object.
-            // 11. Set the [[Prototype]] internal property of F to the standard
-            //   built-in Function prototype object as specified in 15.3.3.1.
-            // 12. Set the [[Call]] internal property of F as described in
-            //   15.3.4.5.1.
-            // 13. Set the [[Construct]] internal property of F as described in
-            //   15.3.4.5.2.
-            // 14. Set the [[HasInstance]] internal property of F as described in
-            //   15.3.4.5.3.
-            var bound;
-            var binder = function binder() {
-
-                if (this instanceof bound) {
-                    // 15.3.4.5.2 [[Construct]]
-                    // When the [[Construct]] internal method of a function object,
-                    // F that was created using the bind function is called with a
-                    // list of arguments ExtraArgs, the following steps are taken:
-                    // 1. Let target be the value of F's [[TargetFunction]]
-                    //   internal property.
-                    // 2. If target has no [[Construct]] internal method, a
-                    //   TypeError exception is thrown.
-                    // 3. Let boundArgs be the value of F's [[BoundArgs]] internal
-                    //   property.
-                    // 4. Let args be a new list containing the same values as the
-                    //   list boundArgs in the same order followed by the same
-                    //   values as the list ExtraArgs in the same order.
-                    // 5. Return the result of calling the [[Construct]] internal
-                    //   method of target providing args as the arguments.
-
-                    var result = target.apply(this, args.concat(array_slice.call(arguments)));
-                    if (Object(result) === result) {
-                        return result;
-                    }
-                    return this;
-                } else {
-                    // 15.3.4.5.1 [[Call]]
-                    // When the [[Call]] internal method of a function object, F,
-                    // which was created using the bind function is called with a
-                    // this value and a list of arguments ExtraArgs, the following
-                    // steps are taken:
-                    // 1. Let boundArgs be the value of F's [[BoundArgs]] internal
-                    //   property.
-                    // 2. Let boundThis be the value of F's [[BoundThis]] internal
-                    //   property.
-                    // 3. Let target be the value of F's [[TargetFunction]] internal
-                    //   property.
-                    // 4. Let args be a new list containing the same values as the
-                    //   list boundArgs in the same order followed by the same
-                    //   values as the list ExtraArgs in the same order.
-                    // 5. Return the result of calling the [[Call]] internal method
-                    //   of target providing boundThis as the this value and
-                    //   providing args as the arguments.
-
-                    // equiv: target.call(this, ...boundArgs, ...args)
-                    return target.apply(that, args.concat(array_slice.call(arguments)));
-                }
-            };
-
-            // 15. If the [[Class]] internal property of Target is "Function", then
-            //     a. Let L be the length property of Target minus the length of A.
-            //     b. Set the length own property of F to either 0 or L, whichever is
-            //       larger.
-            // 16. Else set the length own property of F to 0.
-
-            var boundLength = Math.max(0, target.length - args.length);
-
-            // 17. Set the attributes of the length own property of F to the values
-            //   specified in 15.3.5.1.
-            var boundArgs = [];
-            for (var i = 0; i < boundLength; i++) {
-                boundArgs.push('$' + i);
-            }
-
-            // XXX Build a dynamic function with desired amount of arguments is the only
-            // way to set the length property of a function.
-            // In environments where Content Security Policies enabled (Chrome extensions,
-            // for ex.) all use of eval or Function costructor throws an exception.
-            // However in all of these environments Function.prototype.bind exists
-            // and so this code will never be executed.
-            bound = Function('binder', 'return function (' + boundArgs.join(',') + '){ return binder.apply(this, arguments); }')(binder);
-
-            if (target.prototype) {
-                Empty.prototype = target.prototype;
-                bound.prototype = new Empty();
-                // Clean up dangling references.
-                Empty.prototype = null;
-            }
-
-            // TODO
-            // 18. Set the [[Extensible]] internal property of F to true.
-
-            // TODO
-            // 19. Let thrower be the [[ThrowTypeError]] function Object (13.2.3).
-            // 20. Call the [[DefineOwnProperty]] internal method of F with
-            //   arguments "caller", PropertyDescriptor {[[Get]]: thrower, [[Set]]:
-            //   thrower, [[Enumerable]]: false, [[Configurable]]: false}, and
-            //   false.
-            // 21. Call the [[DefineOwnProperty]] internal method of F with
-            //   arguments "arguments", PropertyDescriptor {[[Get]]: thrower,
-            //   [[Set]]: thrower, [[Enumerable]]: false, [[Configurable]]: false},
-            //   and false.
-
-            // TODO
-            // NOTE Function objects created using Function.prototype.bind do not
-            // have a prototype property or the [[Code]], [[FormalParameters]], and
-            // [[Scope]] internal properties.
-            // XXX can't delete prototype in pure-js.
-
-            // 22. Return F.
-            return bound;
-        }
-    });
-
-    // _Please note: Shortcuts are defined after `Function.prototype.bind` as we
-    // us it in defining shortcuts.
-    var owns = call.bind(ObjectPrototype.hasOwnProperty);
-
-    //
-    // Array
-    // =====
-    //
-
-    // ES5 15.4.4.12
-    // http://es5.github.com/#x15.4.4.12
-    var spliceNoopReturnsEmptyArray = (function () {
-        var a = [1, 2];
-        var result = a.splice();
-        return a.length === 2 && isArray(result) && result.length === 0;
-    })();
-    defineProperties(ArrayPrototype, {
-        // Safari 5.0 bug where .splice() returns undefined
-        splice: function splice(start, deleteCount) {
-            if (arguments.length === 0) {
-                return [];
-            } else {
-                return array_splice.apply(this, arguments);
-            }
-        }
-    }, !spliceNoopReturnsEmptyArray);
-
-    var spliceWorksWithEmptyObject = (function () {
-        var obj = {};
-        ArrayPrototype.splice.call(obj, 0, 0, 1);
-        return obj.length === 1;
-    })();
-    defineProperties(ArrayPrototype, {
-        splice: function splice(start, deleteCount) {
-            if (arguments.length === 0) {
-                return [];
-            }
-            var args = arguments;
-            this.length = Math.max(ES.ToInteger(this.length), 0);
-            if (arguments.length > 0 && typeof deleteCount !== 'number') {
-                args = array_slice.call(arguments);
-                if (args.length < 2) {
-                    args.push(this.length - start);
-                } else {
-                    args[1] = ES.ToInteger(deleteCount);
-                }
-            }
-            return array_splice.apply(this, args);
-        }
-    }, !spliceWorksWithEmptyObject);
-
-    // ES5 15.4.3.2
-    // http://es5.github.com/#x15.4.3.2
-    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/isArray
-    defineProperties(Array, {
-        isArray: isArray
-    });
-
-    // The IsCallable() check in the Array functions
-    // has been replaced with a strict check on the
-    // internal class of the object to trap cases where
-    // the provided function was actually a regular
-    // expression literal, which in V8 and
-    // JavaScriptCore is a typeof "function".  Only in
-    // V8 are regular expression literals permitted as
-    // reduce parameters, so it is desirable in the
-    // general case for the shim to match the more
-    // strict and common behavior of rejecting regular
-    // expressions.
-
-    // ES5 15.4.4.18
-    // http://es5.github.com/#x15.4.4.18
-    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/array/forEach
-
-    // Check failure of by-index access of string characters (IE < 9)
-    // and failure of `0 in boxedString` (Rhino)
-    var boxedString = Object('a');
-    var splitString = boxedString[0] !== 'a' || !(0 in boxedString);
-
-    var properlyBoxesContext = function properlyBoxed(method) {
-        // Check node 0.6.21 bug where third parameter is not boxed
-        var properlyBoxesNonStrict = true;
-        var properlyBoxesStrict = true;
-        if (method) {
-            method.call('foo', function (_, __, context) {
-                if (typeof context !== 'object') {
-                    properlyBoxesNonStrict = false;
-                }
-            });
-
-            method.call([1], function () {
-                'use strict';
-
-                properlyBoxesStrict = typeof this === 'string';
-            }, 'x');
-        }
-        return !!method && properlyBoxesNonStrict && properlyBoxesStrict;
-    };
-
-    defineProperties(ArrayPrototype, {
-        forEach: function forEach(fun /*, thisp*/) {
-            var object = ES.ToObject(this),
-                self = splitString && isString(this) ? this.split('') : object,
-                thisp = arguments[1],
-                i = -1,
-                length = self.length >>> 0;
-
-            // If no callback function or if callback is not a callable function
-            if (!isCallable(fun)) {
-                throw new TypeError(); // TODO message
-            }
-
-            while (++i < length) {
-                if (i in self) {
-                    // Invoke the callback function with call, passing arguments:
-                    // context, property value, property key, thisArg object
-                    // context
-                    fun.call(thisp, self[i], i, object);
-                }
-            }
-        }
-    }, !properlyBoxesContext(ArrayPrototype.forEach));
-
-    // ES5 15.4.4.19
-    // http://es5.github.com/#x15.4.4.19
-    // https://developer.mozilla.org/en/Core_JavaScript_1.5_Reference/Objects/Array/map
-    defineProperties(ArrayPrototype, {
-        map: function map(fun /*, thisp*/) {
-            var object = ES.ToObject(this),
-                self = splitString && isString(this) ? this.split('') : object,
-                length = self.length >>> 0,
-                result = Array(length),
-                thisp = arguments[1];
-
-            // If no callback function or if callback is not a callable function
-            if (!isCallable(fun)) {
-                throw new TypeError(fun + ' is not a function');
-            }
-
-            for (var i = 0; i < length; i++) {
-                if (i in self) {
-                    result[i] = fun.call(thisp, self[i], i, object);
-                }
-            }
-            return result;
-        }
-    }, !properlyBoxesContext(ArrayPrototype.map));
-
-    // ES5 15.4.4.14
-    // http://es5.github.com/#x15.4.4.14
-    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
-    var hasFirefox2IndexOfBug = Array.prototype.indexOf && [0, 1].indexOf(1, 2) !== -1;
-    defineProperties(ArrayPrototype, {
-        indexOf: function indexOf(sought /*, fromIndex */) {
-            var self = splitString && isString(this) ? this.split('') : ES.ToObject(this),
-                length = self.length >>> 0;
-
-            if (!length) {
-                return -1;
-            }
-
-            var i = 0;
-            if (arguments.length > 1) {
-                i = ES.ToInteger(arguments[1]);
-            }
-
-            // handle negative indices
-            i = i >= 0 ? i : Math.max(0, length + i);
-            for (; i < length; i++) {
-                if (i in self && self[i] === sought) {
-                    return i;
-                }
-            }
-            return -1;
-        }
-    }, hasFirefox2IndexOfBug);
-
-    //
-    // Object
-    // ======
-    //
-
-    // ES5 15.2.3.14
-    // http://es5.github.com/#x15.2.3.14
-
-    // http://whattheheadsaid.com/2010/10/a-safer-object-keys-compatibility-implementation
-    var hasDontEnumBug = !({
-        'toString': null
-    }).propertyIsEnumerable('toString'),
-        hasProtoEnumBug = (function () {}).propertyIsEnumerable('prototype'),
-        hasStringEnumBug = !owns('x', '0'),
-        dontEnums = ['toString', 'toLocaleString', 'valueOf', 'hasOwnProperty', 'isPrototypeOf', 'propertyIsEnumerable', 'constructor'],
-        dontEnumsLength = dontEnums.length;
-
-    defineProperties(Object, {
-        keys: function keys(object) {
-            var isFn = isCallable(object),
-                isArgs = isArguments(object),
-                isObject = object !== null && typeof object === 'object',
-                isStr = isObject && isString(object);
-
-            if (!isObject && !isFn && !isArgs) {
-                throw new TypeError('Object.keys called on a non-object');
-            }
-
-            var theKeys = [];
-            var skipProto = hasProtoEnumBug && isFn;
-            if (isStr && hasStringEnumBug || isArgs) {
-                for (var i = 0; i < object.length; ++i) {
-                    theKeys.push(String(i));
-                }
-            }
-
-            if (!isArgs) {
-                for (var name in object) {
-                    if (!(skipProto && name === 'prototype') && owns(object, name)) {
-                        theKeys.push(String(name));
-                    }
-                }
-            }
-
-            if (hasDontEnumBug) {
-                var ctor = object.constructor,
-                    skipConstructor = ctor && ctor.prototype === object;
-                for (var j = 0; j < dontEnumsLength; j++) {
-                    var dontEnum = dontEnums[j];
-                    if (!(skipConstructor && dontEnum === 'constructor') && owns(object, dontEnum)) {
-                        theKeys.push(dontEnum);
-                    }
-                }
-            }
-            return theKeys;
-        }
-    });
-
-    var keysWorksWithArguments = Object.keys && (function () {
-        // Safari 5.0 bug
-        return Object.keys(arguments).length === 2;
-    })(1, 2);
-    var originalKeys = Object.keys;
-    defineProperties(Object, {
-        keys: function keys(object) {
-            if (isArguments(object)) {
-                return originalKeys(ArrayPrototype.slice.call(object));
-            } else {
-                return originalKeys(object);
-            }
-        }
-    }, !keysWorksWithArguments);
-
-    //
-    // String
-    // ======
-    //
-
-    var str_replace = StringPrototype.replace;
-    var replaceReportsGroupsCorrectly = (function () {
-        var groups = [];
-        'x'.replace(/x(.)?/g, function (match, group) {
-            groups.push(group);
-        });
-        return groups.length === 1 && typeof groups[0] === 'undefined';
-    })();
-
-    if (!replaceReportsGroupsCorrectly) {
-        StringPrototype.replace = function replace(searchValue, replaceValue) {
-            var isFn = isCallable(replaceValue);
-            var hasCapturingGroups = isRegex(searchValue) && /\)[*?]/.test(searchValue.source);
-            if (!isFn || !hasCapturingGroups) {
-                return str_replace.call(this, searchValue, replaceValue);
-            } else {
-                var wrappedReplaceValue = function wrappedReplaceValue(match) {
-                    var length = arguments.length;
-                    var originalLastIndex = searchValue.lastIndex;
-                    searchValue.lastIndex = 0;
-                    var args = searchValue.exec(match) || [];
-                    searchValue.lastIndex = originalLastIndex;
-                    args.push(arguments[length - 2], arguments[length - 1]);
-                    return replaceValue.apply(this, args);
-                };
-                return str_replace.call(this, searchValue, wrappedReplaceValue);
-            }
-        };
-    }
-});
-
-/**
- * Shim for "fixing" IE's lack of support (IE < 9) for applying slice
- * on host objects like NamedNodeMap, NodeList, and HTMLCollection
- * (technically, since host objects have been implementation-dependent,
- * at least before ES6, IE hasn't needed to work this way).
- * Also works on strings, fixes IE < 9 to allow an explicit undefined
- * for the 2nd argument (as in Firefox), and prevents errors when
- * called on other DOM objects.
- */
-(function () {
-    'use strict';
-    var _slice = Array.prototype.slice;
-
-    try {
-        // Can't be used with DOM elements in IE < 9
-        _slice.call(document.documentElement);
-    } catch (e) {
-        // Fails in IE < 9
-        // This will work for genuine arrays, array-like objects,
-        // NamedNodeMap (attributes, entities, notations),
-        // NodeList (e.g., getElementsByTagName), HTMLCollection (e.g., childNodes),
-        // and will not fail on other DOM objects (as do DOM elements in IE < 9)
-        Array.prototype.slice = function (begin, end) {
-            // IE < 9 gets unhappy with an undefined end argument
-            end = typeof end !== 'undefined' ? end : this.length;
-
-            // For native Array objects, we use the native slice function
-            if (Object.prototype.toString.call(this) === '[object Array]') {
-                return _slice.call(this, begin, end);
-            }
-
-            // For array like object we handle it ourselves.
-            var i,
-                cloned = [],
-                size,
-                len = this.length;
-
-            // Handle negative value for "begin"
-            var start = begin || 0;
-            start = start >= 0 ? start : len + start;
-
-            // Handle negative value for "end"
-            var upTo = end ? end : len;
-            if (end < 0) {
-                upTo = len + end;
-            }
-
-            // Actual expected size of the slice
-            size = upTo - start;
-
-            if (size > 0) {
-                cloned = new Array(size);
-                if (this.charAt) {
-                    for (i = 0; i < size; i++) {
-                        cloned[i] = this.charAt(start + i);
-                    }
-                } else {
-                    for (i = 0; i < size; i++) {
-                        cloned[i] = this[start + i];
-                    }
-                }
-            }
-
-            return cloned;
-        };
-    }
-})();
-
-},{}],8:[function(require,module,exports){
+},{"./elementUtils.js":1,"./lifeEvents.js":3,"./supportEvent.js":7,"./utils.js":8}],7:[function(require,module,exports){
 /**
  * Module representing the supported events
  * @module supportEvent
@@ -2176,7 +1415,7 @@ module.exports = exports['default'];
 Object.defineProperty(exports, '__esModule', {
     value: true
 });
-var supportEvent = {
+exports['default'] = supportEvent = {
     // 只支持原生的
     onClick: 'click',
     onDoubleClick: 'doubleclick',
@@ -2219,9 +1458,9 @@ var supportEvent = {
     onInput: 'input',
     onSubmit: 'submit'
 };
-exports.supportEvent = supportEvent;
+module.exports = exports['default'];
 
-},{}],9:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2453,9 +1692,6 @@ function toPlainArray(data) {
         if (isArray(item)) {
             result = result.concat(toPlainArray(item));
         } else {
-            if (typeof item == 'number') {
-                item += '';
-            }
             result.push(item);
         }
     }
@@ -2486,39 +1722,9 @@ function deserializeValue(value, typeFunc, currentValue) {
     return typeHandlers[inferredType](value, currentValue);
 }
 
-},{"./plainDOM.js":4}],10:[function(require,module,exports){
-'use strict';
+},{"./plainDOM.js":4}],9:[function(require,module,exports){
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var _es6libRosettaCoreJs = require('./es6lib/rosettaCore.js');
-
-var _es6libRosettaCoreJs2 = _interopRequireDefault(_es6libRosettaCoreJs);
-
-require('./es6lib/shims.js');
-var readyRE = /complete/;
-
-function ready(callback) {
-    if (readyRE.test(document.readyState) && document.body) {
-        callback();
-    } else {
-        if (!document.addEventListener) {
-            window.attachEvent('onload', callback);
-        } else {
-            document.addEventListener('DOMContentLoaded', function () {
-                callback();
-            }, false);
-        }
-    }
-}
-
-window.Rosetta = _es6libRosettaCoreJs2['default'];
-
-ready(_es6libRosettaCoreJs2['default'].render);
-
-},{"./es6lib/rosettaCore.js":5,"./es6lib/shims.js":7}],11:[function(require,module,exports){
-
-},{}],12:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 'use strict';
 
 var OneVersionConstraint = require('individual/one-version');
@@ -2540,7 +1746,7 @@ function EvStore(elem) {
     return hash;
 }
 
-},{"individual/one-version":14}],13:[function(require,module,exports){
+},{"individual/one-version":12}],11:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -2563,7 +1769,7 @@ function Individual(key, value) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],14:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 'use strict';
 
 var Individual = require('./index.js');
@@ -2587,22 +1793,17 @@ function OneVersion(moduleName, version, defaultValue) {
     return Individual(key, defaultValue);
 }
 
-},{"./index.js":13}],15:[function(require,module,exports){
+},{"./index.js":11}],13:[function(require,module,exports){
 var createElement = require("./vdom/create-element.js")
 
 module.exports = createElement
 
-},{"./vdom/create-element.js":27}],16:[function(require,module,exports){
-var diff = require("./vtree/diff.js")
-
-module.exports = diff
-
-},{"./vtree/diff.js":47}],17:[function(require,module,exports){
+},{"./vdom/create-element.js":23}],14:[function(require,module,exports){
 var h = require("./virtual-hyperscript/index.js")
 
 module.exports = h
 
-},{"./virtual-hyperscript/index.js":34}],18:[function(require,module,exports){
+},{"./virtual-hyperscript/index.js":26}],15:[function(require,module,exports){
 /*!
  * Cross-Browser Split 1.1.1
  * Copyright 2007-2012 Steven Levithan <stevenlevithan.com>
@@ -2710,13 +1911,13 @@ module.exports = (function split(undef) {
   return self;
 })();
 
-},{}],19:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
+arguments[4][10][0].apply(exports,arguments)
+},{"dup":10,"individual/one-version":18}],17:[function(require,module,exports){
+arguments[4][11][0].apply(exports,arguments)
+},{"dup":11}],18:[function(require,module,exports){
 arguments[4][12][0].apply(exports,arguments)
-},{"dup":12,"individual/one-version":21}],20:[function(require,module,exports){
-arguments[4][13][0].apply(exports,arguments)
-},{"dup":13}],21:[function(require,module,exports){
-arguments[4][14][0].apply(exports,arguments)
-},{"./index.js":20,"dup":14}],22:[function(require,module,exports){
+},{"./index.js":17,"dup":12}],19:[function(require,module,exports){
 (function (global){
 var topLevel = typeof global !== 'undefined' ? global :
     typeof window !== 'undefined' ? window : {}
@@ -2735,14 +1936,14 @@ if (typeof document !== 'undefined') {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"min-document":11}],23:[function(require,module,exports){
+},{"min-document":9}],20:[function(require,module,exports){
 "use strict";
 
 module.exports = function isObject(x) {
 	return typeof x === "object" && x !== null;
 };
 
-},{}],24:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 var nativeIsArray = Array.isArray
 var toString = Object.prototype.toString
 
@@ -2752,12 +1953,7 @@ function isArray(obj) {
     return toString.call(obj) === "[object Array]"
 }
 
-},{}],25:[function(require,module,exports){
-var patch = require("./vdom/patch.js")
-
-module.exports = patch
-
-},{"./vdom/patch.js":30}],26:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 var isObject = require("is-object")
 var isHook = require("../vnode/is-vhook.js")
 
@@ -2856,7 +2052,7 @@ function getPrototype(value) {
     }
 }
 
-},{"../vnode/is-vhook.js":38,"is-object":23}],27:[function(require,module,exports){
+},{"../vnode/is-vhook.js":30,"is-object":20}],23:[function(require,module,exports){
 var document = require("global/document")
 
 var applyProperties = require("./apply-properties")
@@ -2904,374 +2100,7 @@ function createElement(vnode, opts) {
     return node
 }
 
-},{"../vnode/handle-thunk.js":36,"../vnode/is-vnode.js":39,"../vnode/is-vtext.js":40,"../vnode/is-widget.js":41,"./apply-properties":26,"global/document":22}],28:[function(require,module,exports){
-// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
-// We don't want to read all of the DOM nodes in the tree so we use
-// the in-order tree indexing to eliminate recursion down certain branches.
-// We only recurse into a DOM node if we know that it contains a child of
-// interest.
-
-var noChild = {}
-
-module.exports = domIndex
-
-function domIndex(rootNode, tree, indices, nodes) {
-    if (!indices || indices.length === 0) {
-        return {}
-    } else {
-        indices.sort(ascending)
-        return recurse(rootNode, tree, indices, nodes, 0)
-    }
-}
-
-function recurse(rootNode, tree, indices, nodes, rootIndex) {
-    nodes = nodes || {}
-
-
-    if (rootNode) {
-        if (indexInRange(indices, rootIndex, rootIndex)) {
-            nodes[rootIndex] = rootNode
-        }
-
-        var vChildren = tree.children
-
-        if (vChildren) {
-
-            var childNodes = rootNode.childNodes
-
-            for (var i = 0; i < tree.children.length; i++) {
-                rootIndex += 1
-
-                var vChild = vChildren[i] || noChild
-                var nextIndex = rootIndex + (vChild.count || 0)
-
-                // skip recursion down the tree if there are no nodes down here
-                if (indexInRange(indices, rootIndex, nextIndex)) {
-                    recurse(childNodes[i], vChild, indices, nodes, rootIndex)
-                }
-
-                rootIndex = nextIndex
-            }
-        }
-    }
-
-    return nodes
-}
-
-// Binary search for an index in the interval [left, right]
-function indexInRange(indices, left, right) {
-    if (indices.length === 0) {
-        return false
-    }
-
-    var minIndex = 0
-    var maxIndex = indices.length - 1
-    var currentIndex
-    var currentItem
-
-    while (minIndex <= maxIndex) {
-        currentIndex = ((maxIndex + minIndex) / 2) >> 0
-        currentItem = indices[currentIndex]
-
-        if (minIndex === maxIndex) {
-            return currentItem >= left && currentItem <= right
-        } else if (currentItem < left) {
-            minIndex = currentIndex + 1
-        } else  if (currentItem > right) {
-            maxIndex = currentIndex - 1
-        } else {
-            return true
-        }
-    }
-
-    return false;
-}
-
-function ascending(a, b) {
-    return a > b ? 1 : -1
-}
-
-},{}],29:[function(require,module,exports){
-var applyProperties = require("./apply-properties")
-
-var isWidget = require("../vnode/is-widget.js")
-var VPatch = require("../vnode/vpatch.js")
-
-var render = require("./create-element")
-var updateWidget = require("./update-widget")
-
-module.exports = applyPatch
-
-function applyPatch(vpatch, domNode, renderOptions) {
-    var type = vpatch.type
-    var vNode = vpatch.vNode
-    var patch = vpatch.patch
-
-    switch (type) {
-        case VPatch.REMOVE:
-            return removeNode(domNode, vNode)
-        case VPatch.INSERT:
-            return insertNode(domNode, patch, renderOptions)
-        case VPatch.VTEXT:
-            return stringPatch(domNode, vNode, patch, renderOptions)
-        case VPatch.WIDGET:
-            return widgetPatch(domNode, vNode, patch, renderOptions)
-        case VPatch.VNODE:
-            return vNodePatch(domNode, vNode, patch, renderOptions)
-        case VPatch.ORDER:
-            reorderChildren(domNode, patch)
-            return domNode
-        case VPatch.PROPS:
-            applyProperties(domNode, patch, vNode.properties)
-            return domNode
-        case VPatch.THUNK:
-            return replaceRoot(domNode,
-                renderOptions.patch(domNode, patch, renderOptions))
-        default:
-            return domNode
-    }
-}
-
-function removeNode(domNode, vNode) {
-    var parentNode = domNode.parentNode
-
-    if (parentNode) {
-        parentNode.removeChild(domNode)
-    }
-
-    destroyWidget(domNode, vNode);
-
-    return null
-}
-
-function insertNode(parentNode, vNode, renderOptions) {
-    var newNode = render(vNode, renderOptions)
-
-    if (parentNode) {
-        parentNode.appendChild(newNode)
-    }
-
-    return parentNode
-}
-
-function stringPatch(domNode, leftVNode, vText, renderOptions) {
-    var newNode
-
-    if (domNode.nodeType === 3) {
-        domNode.replaceData(0, domNode.length, vText.text)
-        newNode = domNode
-    } else {
-        var parentNode = domNode.parentNode
-        newNode = render(vText, renderOptions)
-
-        if (parentNode) {
-            parentNode.replaceChild(newNode, domNode)
-        }
-    }
-
-    return newNode
-}
-
-function widgetPatch(domNode, leftVNode, widget, renderOptions) {
-    var updating = updateWidget(leftVNode, widget)
-    var newNode
-
-    if (updating) {
-        newNode = widget.update(leftVNode, domNode) || domNode
-    } else {
-        newNode = render(widget, renderOptions)
-    }
-
-    var parentNode = domNode.parentNode
-
-    if (parentNode && newNode !== domNode) {
-        parentNode.replaceChild(newNode, domNode)
-    }
-
-    if (!updating) {
-        destroyWidget(domNode, leftVNode)
-    }
-
-    return newNode
-}
-
-function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
-    var parentNode = domNode.parentNode
-    var newNode = render(vNode, renderOptions)
-
-    if (parentNode) {
-        parentNode.replaceChild(newNode, domNode)
-    }
-
-    return newNode
-}
-
-function destroyWidget(domNode, w) {
-    if (typeof w.destroy === "function" && isWidget(w)) {
-        w.destroy(domNode)
-    }
-}
-
-function reorderChildren(domNode, bIndex) {
-    var children = []
-    var childNodes = domNode.childNodes
-    var len = childNodes.length
-    var i
-    var reverseIndex = bIndex.reverse
-
-    for (i = 0; i < len; i++) {
-        children.push(domNode.childNodes[i])
-    }
-
-    var insertOffset = 0
-    var move
-    var node
-    var insertNode
-    var chainLength
-    var insertedLength
-    var nextSibling
-    for (i = 0; i < len;) {
-        move = bIndex[i]
-        chainLength = 1
-        if (move !== undefined && move !== i) {
-            // try to bring forward as long of a chain as possible
-            while (bIndex[i + chainLength] === move + chainLength) {
-                chainLength++;
-            }
-
-            // the element currently at this index will be moved later so increase the insert offset
-            if (reverseIndex[i] > i + chainLength) {
-                insertOffset++
-            }
-
-            node = children[move]
-            insertNode = childNodes[i + insertOffset] || null
-            insertedLength = 0
-            while (node !== insertNode && insertedLength++ < chainLength) {
-                domNode.insertBefore(node, insertNode);
-                node = children[move + insertedLength];
-            }
-
-            // the moved element came from the front of the array so reduce the insert offset
-            if (move + chainLength < i) {
-                insertOffset--
-            }
-        }
-
-        // element at this index is scheduled to be removed so increase insert offset
-        if (i in bIndex.removes) {
-            insertOffset++
-        }
-
-        i += chainLength
-    }
-}
-
-function replaceRoot(oldRoot, newRoot) {
-    if (oldRoot && newRoot && oldRoot !== newRoot && oldRoot.parentNode) {
-        console.log(oldRoot)
-        oldRoot.parentNode.replaceChild(newRoot, oldRoot)
-    }
-
-    return newRoot;
-}
-
-},{"../vnode/is-widget.js":41,"../vnode/vpatch.js":44,"./apply-properties":26,"./create-element":27,"./update-widget":31}],30:[function(require,module,exports){
-var document = require("global/document")
-var isArray = require("x-is-array")
-
-var domIndex = require("./dom-index")
-var patchOp = require("./patch-op")
-module.exports = patch
-
-function patch(rootNode, patches) {
-    return patchRecursive(rootNode, patches)
-}
-
-function patchRecursive(rootNode, patches, renderOptions) {
-    var indices = patchIndices(patches)
-
-    if (indices.length === 0) {
-        return rootNode
-    }
-
-    var index = domIndex(rootNode, patches.a, indices)
-    var ownerDocument = rootNode.ownerDocument
-
-    if (!renderOptions) {
-        renderOptions = { patch: patchRecursive }
-        if (ownerDocument !== document) {
-            renderOptions.document = ownerDocument
-        }
-    }
-
-    for (var i = 0; i < indices.length; i++) {
-        var nodeIndex = indices[i]
-        rootNode = applyPatch(rootNode,
-            index[nodeIndex],
-            patches[nodeIndex],
-            renderOptions)
-    }
-
-    return rootNode
-}
-
-function applyPatch(rootNode, domNode, patchList, renderOptions) {
-    if (!domNode) {
-        return rootNode
-    }
-
-    var newNode
-
-    if (isArray(patchList)) {
-        for (var i = 0; i < patchList.length; i++) {
-            newNode = patchOp(patchList[i], domNode, renderOptions)
-
-            if (domNode === rootNode) {
-                rootNode = newNode
-            }
-        }
-    } else {
-        newNode = patchOp(patchList, domNode, renderOptions)
-
-        if (domNode === rootNode) {
-            rootNode = newNode
-        }
-    }
-
-    return rootNode
-}
-
-function patchIndices(patches) {
-    var indices = []
-
-    for (var key in patches) {
-        if (key !== "a") {
-            indices.push(Number(key))
-        }
-    }
-
-    return indices
-}
-
-},{"./dom-index":28,"./patch-op":29,"global/document":22,"x-is-array":24}],31:[function(require,module,exports){
-var isWidget = require("../vnode/is-widget.js")
-
-module.exports = updateWidget
-
-function updateWidget(a, b) {
-    if (isWidget(a) && isWidget(b)) {
-        if ("name" in a && "name" in b) {
-            return a.id === b.id
-        } else {
-            return a.init === b.init
-        }
-    }
-
-    return false
-}
-
-},{"../vnode/is-widget.js":41}],32:[function(require,module,exports){
+},{"../vnode/handle-thunk.js":28,"../vnode/is-vnode.js":31,"../vnode/is-vtext.js":32,"../vnode/is-widget.js":33,"./apply-properties":22,"global/document":19}],24:[function(require,module,exports){
 'use strict';
 
 var EvStore = require('ev-store');
@@ -3300,7 +2129,7 @@ EvHook.prototype.unhook = function(node, propertyName) {
     es[propName] = undefined;
 };
 
-},{"ev-store":19}],33:[function(require,module,exports){
+},{"ev-store":16}],25:[function(require,module,exports){
 'use strict';
 
 module.exports = SoftSetHook;
@@ -3319,7 +2148,7 @@ SoftSetHook.prototype.hook = function (node, propertyName) {
     }
 };
 
-},{}],34:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict';
 
 var isArray = require('x-is-array');
@@ -3456,7 +2285,7 @@ function errorString(obj) {
     }
 }
 
-},{"../vnode/is-thunk":37,"../vnode/is-vhook":38,"../vnode/is-vnode":39,"../vnode/is-vtext":40,"../vnode/is-widget":41,"../vnode/vnode.js":43,"../vnode/vtext.js":45,"./hooks/ev-hook.js":32,"./hooks/soft-set-hook.js":33,"./parse-tag.js":35,"x-is-array":24}],35:[function(require,module,exports){
+},{"../vnode/is-thunk":29,"../vnode/is-vhook":30,"../vnode/is-vnode":31,"../vnode/is-vtext":32,"../vnode/is-widget":33,"../vnode/vnode.js":35,"../vnode/vtext.js":36,"./hooks/ev-hook.js":24,"./hooks/soft-set-hook.js":25,"./parse-tag.js":27,"x-is-array":21}],27:[function(require,module,exports){
 'use strict';
 
 var split = require('browser-split');
@@ -3512,7 +2341,7 @@ function parseTag(tag, props) {
     return props.namespace ? tagName : tagName.toUpperCase();
 }
 
-},{"browser-split":18}],36:[function(require,module,exports){
+},{"browser-split":15}],28:[function(require,module,exports){
 var isVNode = require("./is-vnode")
 var isVText = require("./is-vtext")
 var isWidget = require("./is-widget")
@@ -3554,14 +2383,14 @@ function renderThunk(thunk, previous) {
     return renderedThunk
 }
 
-},{"./is-thunk":37,"./is-vnode":39,"./is-vtext":40,"./is-widget":41}],37:[function(require,module,exports){
+},{"./is-thunk":29,"./is-vnode":31,"./is-vtext":32,"./is-widget":33}],29:[function(require,module,exports){
 module.exports = isThunk
 
 function isThunk(t) {
     return t && t.type === "Thunk"
 }
 
-},{}],38:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 module.exports = isHook
 
 function isHook(hook) {
@@ -3570,7 +2399,7 @@ function isHook(hook) {
        typeof hook.unhook === "function" && !hook.hasOwnProperty("unhook"))
 }
 
-},{}],39:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = isVirtualNode
@@ -3579,7 +2408,7 @@ function isVirtualNode(x) {
     return x && x.type === "VirtualNode" && x.version === version
 }
 
-},{"./version":42}],40:[function(require,module,exports){
+},{"./version":34}],32:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = isVirtualText
@@ -3588,17 +2417,17 @@ function isVirtualText(x) {
     return x && x.type === "VirtualText" && x.version === version
 }
 
-},{"./version":42}],41:[function(require,module,exports){
+},{"./version":34}],33:[function(require,module,exports){
 module.exports = isWidget
 
 function isWidget(w) {
     return w && w.type === "Widget"
 }
 
-},{}],42:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 module.exports = "1"
 
-},{}],43:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 var version = require("./version")
 var isVNode = require("./is-vnode")
 var isWidget = require("./is-widget")
@@ -3672,31 +2501,7 @@ function VirtualNode(tagName, properties, children, key, namespace) {
 VirtualNode.prototype.version = version
 VirtualNode.prototype.type = "VirtualNode"
 
-},{"./is-thunk":37,"./is-vhook":38,"./is-vnode":39,"./is-widget":41,"./version":42}],44:[function(require,module,exports){
-var version = require("./version")
-
-VirtualPatch.NONE = 0
-VirtualPatch.VTEXT = 1
-VirtualPatch.VNODE = 2
-VirtualPatch.WIDGET = 3
-VirtualPatch.PROPS = 4
-VirtualPatch.ORDER = 5
-VirtualPatch.INSERT = 6
-VirtualPatch.REMOVE = 7
-VirtualPatch.THUNK = 8
-
-module.exports = VirtualPatch
-
-function VirtualPatch(type, vNode, patch) {
-    this.type = Number(type)
-    this.vNode = vNode
-    this.patch = patch
-}
-
-VirtualPatch.prototype.version = version
-VirtualPatch.prototype.type = "VirtualPatch"
-
-},{"./version":42}],45:[function(require,module,exports){
+},{"./is-thunk":29,"./is-vhook":30,"./is-vnode":31,"./is-widget":33,"./version":34}],36:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = VirtualText
@@ -3708,389 +2513,4 @@ function VirtualText(text) {
 VirtualText.prototype.version = version
 VirtualText.prototype.type = "VirtualText"
 
-},{"./version":42}],46:[function(require,module,exports){
-var isObject = require("is-object")
-var isHook = require("../vnode/is-vhook")
-
-module.exports = diffProps
-
-function diffProps(a, b) {
-    var diff
-
-    for (var aKey in a) {
-        if (!(aKey in b)) {
-            diff = diff || {}
-            diff[aKey] = undefined
-        }
-
-        var aValue = a[aKey]
-        var bValue = b[aKey]
-
-        if (aValue === bValue) {
-            continue
-        } else if (isObject(aValue) && isObject(bValue)) {
-            if (getPrototype(bValue) !== getPrototype(aValue)) {
-                diff = diff || {}
-                diff[aKey] = bValue
-            } else if (isHook(bValue)) {
-                 diff = diff || {}
-                 diff[aKey] = bValue
-            } else {
-                var objectDiff = diffProps(aValue, bValue)
-                if (objectDiff) {
-                    diff = diff || {}
-                    diff[aKey] = objectDiff
-                }
-            }
-        } else {
-            diff = diff || {}
-            diff[aKey] = bValue
-        }
-    }
-
-    for (var bKey in b) {
-        if (!(bKey in a)) {
-            diff = diff || {}
-            diff[bKey] = b[bKey]
-        }
-    }
-
-    return diff
-}
-
-function getPrototype(value) {
-  if (Object.getPrototypeOf) {
-    return Object.getPrototypeOf(value)
-  } else if (value.__proto__) {
-    return value.__proto__
-  } else if (value.constructor) {
-    return value.constructor.prototype
-  }
-}
-
-},{"../vnode/is-vhook":38,"is-object":23}],47:[function(require,module,exports){
-var isArray = require("x-is-array")
-
-var VPatch = require("../vnode/vpatch")
-var isVNode = require("../vnode/is-vnode")
-var isVText = require("../vnode/is-vtext")
-var isWidget = require("../vnode/is-widget")
-var isThunk = require("../vnode/is-thunk")
-var handleThunk = require("../vnode/handle-thunk")
-
-var diffProps = require("./diff-props")
-
-module.exports = diff
-
-function diff(a, b) {
-    var patch = { a: a }
-    walk(a, b, patch, 0)
-    return patch
-}
-
-function walk(a, b, patch, index) {
-    if (a === b) {
-        return
-    }
-
-    var apply = patch[index]
-    var applyClear = false
-
-    if (isThunk(a) || isThunk(b)) {
-        thunks(a, b, patch, index)
-    } else if (b == null) {
-
-        // If a is a widget we will add a remove patch for it
-        // Otherwise any child widgets/hooks must be destroyed.
-        // This prevents adding two remove patches for a widget.
-        if (!isWidget(a)) {
-            clearState(a, patch, index)
-            apply = patch[index]
-        }
-
-        apply = appendPatch(apply, new VPatch(VPatch.REMOVE, a, b))
-    } else if (isVNode(b)) {
-        if (isVNode(a)) {
-            if (a.tagName === b.tagName &&
-                a.namespace === b.namespace &&
-                a.key === b.key) {
-                var propsPatch = diffProps(a.properties, b.properties)
-                if (propsPatch) {
-                    apply = appendPatch(apply,
-                        new VPatch(VPatch.PROPS, a, propsPatch))
-                }
-                apply = diffChildren(a, b, patch, apply, index)
-            } else {
-                apply = appendPatch(apply, new VPatch(VPatch.VNODE, a, b))
-                applyClear = true
-            }
-        } else {
-            apply = appendPatch(apply, new VPatch(VPatch.VNODE, a, b))
-            applyClear = true
-        }
-    } else if (isVText(b)) {
-        if (!isVText(a)) {
-            apply = appendPatch(apply, new VPatch(VPatch.VTEXT, a, b))
-            applyClear = true
-        } else if (a.text !== b.text) {
-            apply = appendPatch(apply, new VPatch(VPatch.VTEXT, a, b))
-        }
-    } else if (isWidget(b)) {
-        if (!isWidget(a)) {
-            applyClear = true;
-        }
-
-        apply = appendPatch(apply, new VPatch(VPatch.WIDGET, a, b))
-    }
-
-    if (apply) {
-        patch[index] = apply
-    }
-
-    if (applyClear) {
-        clearState(a, patch, index)
-    }
-}
-
-function diffChildren(a, b, patch, apply, index) {
-    var aChildren = a.children
-    var bChildren = reorder(aChildren, b.children)
-
-    var aLen = aChildren.length
-    var bLen = bChildren.length
-    var len = aLen > bLen ? aLen : bLen
-
-    for (var i = 0; i < len; i++) {
-        var leftNode = aChildren[i]
-        var rightNode = bChildren[i]
-        index += 1
-
-        if (!leftNode) {
-            if (rightNode) {
-                // Excess nodes in b need to be added
-                apply = appendPatch(apply,
-                    new VPatch(VPatch.INSERT, null, rightNode))
-            }
-        } else {
-            walk(leftNode, rightNode, patch, index)
-        }
-
-        if (isVNode(leftNode) && leftNode.count) {
-            index += leftNode.count
-        }
-    }
-
-    if (bChildren.moves) {
-        // Reorder nodes last
-        apply = appendPatch(apply, new VPatch(VPatch.ORDER, a, bChildren.moves))
-    }
-
-    return apply
-}
-
-function clearState(vNode, patch, index) {
-    // TODO: Make this a single walk, not two
-    unhook(vNode, patch, index)
-    destroyWidgets(vNode, patch, index)
-}
-
-// Patch records for all destroyed widgets must be added because we need
-// a DOM node reference for the destroy function
-function destroyWidgets(vNode, patch, index) {
-    if (isWidget(vNode)) {
-        if (typeof vNode.destroy === "function") {
-            patch[index] = appendPatch(
-                patch[index],
-                new VPatch(VPatch.REMOVE, vNode, null)
-            )
-        }
-    } else if (isVNode(vNode) && (vNode.hasWidgets || vNode.hasThunks)) {
-        var children = vNode.children
-        var len = children.length
-        for (var i = 0; i < len; i++) {
-            var child = children[i]
-            index += 1
-
-            destroyWidgets(child, patch, index)
-
-            if (isVNode(child) && child.count) {
-                index += child.count
-            }
-        }
-    } else if (isThunk(vNode)) {
-        thunks(vNode, null, patch, index)
-    }
-}
-
-// Create a sub-patch for thunks
-function thunks(a, b, patch, index) {
-    var nodes = handleThunk(a, b);
-    var thunkPatch = diff(nodes.a, nodes.b)
-    if (hasPatches(thunkPatch)) {
-        patch[index] = new VPatch(VPatch.THUNK, null, thunkPatch)
-    }
-}
-
-function hasPatches(patch) {
-    for (var index in patch) {
-        if (index !== "a") {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-// Execute hooks when two nodes are identical
-function unhook(vNode, patch, index) {
-    if (isVNode(vNode)) {
-        if (vNode.hooks) {
-            patch[index] = appendPatch(
-                patch[index],
-                new VPatch(
-                    VPatch.PROPS,
-                    vNode,
-                    undefinedKeys(vNode.hooks)
-                )
-            )
-        }
-
-        if (vNode.descendantHooks || vNode.hasThunks) {
-            var children = vNode.children
-            var len = children.length
-            for (var i = 0; i < len; i++) {
-                var child = children[i]
-                index += 1
-
-                unhook(child, patch, index)
-
-                if (isVNode(child) && child.count) {
-                    index += child.count
-                }
-            }
-        }
-    } else if (isThunk(vNode)) {
-        thunks(vNode, null, patch, index)
-    }
-}
-
-function undefinedKeys(obj) {
-    var result = {}
-
-    for (var key in obj) {
-        result[key] = undefined
-    }
-
-    return result
-}
-
-// List diff, naive left to right reordering
-function reorder(aChildren, bChildren) {
-
-    var bKeys = keyIndex(bChildren)
-
-    if (!bKeys) {
-        return bChildren
-    }
-
-    var aKeys = keyIndex(aChildren)
-
-    if (!aKeys) {
-        return bChildren
-    }
-
-    var bMatch = {}, aMatch = {}
-
-    for (var aKey in bKeys) {
-        bMatch[bKeys[aKey]] = aKeys[aKey]
-    }
-
-    for (var bKey in aKeys) {
-        aMatch[aKeys[bKey]] = bKeys[bKey]
-    }
-
-    var aLen = aChildren.length
-    var bLen = bChildren.length
-    var len = aLen > bLen ? aLen : bLen
-    var shuffle = []
-    var freeIndex = 0
-    var i = 0
-    var moveIndex = 0
-    var moves = {}
-    var removes = moves.removes = {}
-    var reverse = moves.reverse = {}
-    var hasMoves = false
-
-    while (freeIndex < len) {
-        var move = aMatch[i]
-        if (move !== undefined) {
-            shuffle[i] = bChildren[move]
-            if (move !== moveIndex) {
-                moves[move] = moveIndex
-                reverse[moveIndex] = move
-                hasMoves = true
-            }
-            moveIndex++
-        } else if (i in aMatch) {
-            shuffle[i] = undefined
-            removes[i] = moveIndex++
-            hasMoves = true
-        } else {
-            while (bMatch[freeIndex] !== undefined) {
-                freeIndex++
-            }
-
-            if (freeIndex < len) {
-                var freeChild = bChildren[freeIndex]
-                if (freeChild) {
-                    shuffle[i] = freeChild
-                    if (freeIndex !== moveIndex) {
-                        hasMoves = true
-                        moves[freeIndex] = moveIndex
-                        reverse[moveIndex] = freeIndex
-                    }
-                    moveIndex++
-                }
-                freeIndex++
-            }
-        }
-        i++
-    }
-
-    if (hasMoves) {
-        shuffle.moves = moves
-    }
-
-    return shuffle
-}
-
-function keyIndex(children) {
-    var i, keys
-
-    for (i = 0; i < children.length; i++) {
-        var child = children[i]
-
-        if (child.key !== undefined) {
-            keys = keys || {}
-            keys[child.key] = i
-        }
-    }
-
-    return keys
-}
-
-function appendPatch(apply, patch) {
-    if (apply) {
-        if (isArray(apply)) {
-            apply.push(patch)
-        } else {
-            apply = [apply, patch]
-        }
-
-        return apply
-    } else {
-        return patch
-    }
-}
-
-},{"../vnode/handle-thunk":36,"../vnode/is-thunk":37,"../vnode/is-vnode":39,"../vnode/is-vtext":40,"../vnode/is-widget":41,"../vnode/vpatch":44,"./diff-props":46,"x-is-array":24}]},{},[10]);
+},{"./version":34}]},{},[5]);

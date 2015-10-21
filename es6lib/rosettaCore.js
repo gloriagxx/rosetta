@@ -9,16 +9,15 @@
 // define module dependency
 import elementClassFactory from './rosettaElement.js';
 import {ATTACHED, DETACHED, CREATED, ATTRIBUTECHANGE} from './lifeEvents.js';
-import htmlImport from './htmlImport';
-import supportEvent from './supportEvent.js';
-import {isArray, query, extend, toPlainArray, isOriginalTag, isDomNode, isString, isFunction, bind, fire, deserializeValue, typeHandlers} from './utils.js';
-import {updateRefs, triggerChildren, handleEvent, attributeToProperty, handleAttr, updateChildElemRoot, appendRoot, handleContent} from './elementUtils.js';
+import {htmlImport} from './htmlImport';
+import {supportEvent} from './supportEvent.js';
+import {isArray, extend, toPlainArray, isOriginalTag, isDomNode, isString, isFunction, deserializeValue, typeHandlers} from './utils.js';
+import {updateRefs, triggerChildren, handleEvent, attributeToProperty, handleAttr, updateChildElemRoot, appendRoot, handleContent, query, bind, trigger} from './elementUtils.js';
 
 
 // vdom relavent
 import h from 'virtual-dom/h';
 import createElement from 'virtual-dom/create-element';
-import EvStore from "./virtual-dom/node_modules/ev-store";
 
 
 // define private instances
@@ -76,7 +75,7 @@ function init() {
     }
 
     _allRendered = true;
-    fire.call(Rosetta, 'ready');
+    trigger.call(Rosetta, 'ready');
 }
 
 /*
@@ -85,10 +84,12 @@ function init() {
  * @param {object} initArr, attributes of the newly created element
  * @return {object} vTree, contains referer of rosetta instance
  */
-function create(type, initAttr = {}) {
+function create(type, initAttr) {
     if (!isString(type)) {
         return;
     }
+
+    initAttr = initAttr || {};
 
     var children = [].slice.call(arguments, 2);
     children = toPlainArray(children);
@@ -112,9 +113,9 @@ function create(type, initAttr = {}) {
         return vTree;
     } else {
         // 查找是否存在class
-        var ElemClass = getElemClass[type];
+        var ElemClass = getElemClass(type);
         if (!ElemClass) {
-            return;
+            return false;
         }
 
         // 生成rosetta elem的id
@@ -124,16 +125,17 @@ function create(type, initAttr = {}) {
         var elemObj = new ElemClass();
 
         // 设置name为initAttr.ref的值
-        elemObj.name = initAttr.ref ? initAttr.ref && ref(initAttr.ref, elemObj) : '';
+        elemObj.name = initAttr.ref ? initAttr.ref: '';
         // 将initAttr转换为对应this.properties的type的attr真实值，并处理好vtree要求的事件属性格式
         var result = handleAttr(initAttr, elemObj);
         var attr = result.attr;
         var eventObj = result.eventObj;
         var events = result.events;        // 设置id，设置elem实例的property为attribute
-        attr.elemID = elemID;
+        elemObj.elemID = elemID;
 
         // 生成vtree
         vTree  = elemObj.__t(elemObj, elemObj.$);
+        vTree.properties.attributes.elemID = elemID;
 
         // 处理children，将children存起来，方便根节点render的时候统一处理children content的事情
         if (children) {
@@ -171,7 +173,7 @@ function create(type, initAttr = {}) {
  */
 function render(vTree, parentDOM, ifReplace) {
     // 如果没有参数，表示全document渲染dom
-    if (!vTree) {
+    if (vTree === undefined) {
         init();
         return;
     }
@@ -206,7 +208,7 @@ function render(vTree, parentDOM, ifReplace) {
         // 处理事件绑定: 遍历每个子rosetta element绑定事件，绑定自己的事情
         handleEvent(rObj);
         // 派发element的ready事件（已经有dom，但是并未appedn到父节点上）
-        triggerChildren(rObj, 'domready');
+        triggerChildren(rObj, 'ready');
         // 更新dom
         appendRoot(dom, parentDOM, ifReplace);
         // 派发attached事件相关
@@ -324,7 +326,7 @@ function setRef(key, value) {
  * Array or Object. Serialized using JSON.stringify.
  *
  */
-export default function Rosetta(opts) {
+function Rosetta(opts) {
     // 组件注册接口
     // 创建新的组件class
     // 标记异步import加载器的该类型组件class已经定义
@@ -338,16 +340,15 @@ export default function Rosetta(opts) {
 }
 
 extend(Rosetta, {
-    'ref': ref,
+    'ref': getRef,
 
-    'render': render,
-
-    'create': create,
-
-    'ready': ready,
+    render,
+    create,
+    ready,
 
     'import': htmlImport,
 
     'config': htmlImport.resourceMap
 });
 
+export default Rosetta;

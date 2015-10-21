@@ -157,7 +157,7 @@ function createCSS (url, id, onerror) {
  * @param {array} urls - Array of resources to be loaded
  *
  */
-function htmlImport (urls, onload, onerror) {
+export function htmlImport (urls, onload, onerror) {
     if (typeof urls == 'string') {
         urls = [urls];
     }
@@ -235,5 +235,3 @@ function loadScript (id, callback, onerror) {
 
 htmlImport.factoryMap = factoryMap;
 htmlImport.resourceMap = resourceMap;
-
-module.exports = htmlImport;
