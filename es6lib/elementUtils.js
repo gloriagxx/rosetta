@@ -194,42 +194,6 @@ export function handleAttr(attr, rosettaObj) {
     }
 }
 
-/*
- *@function handleContent, put children into right place in the content
- * @param {array} contents contains children dom as an array
- */
-export function handleContent(contents) {
-    (contents || []).map(function(content, index){
-        var parent = getParent(content);
-        var num = parent.getAttribute('shouldReplacedContent');
-        var children = _shouldReplacedContent[parseInt(num)];
-
-        var newWrapper = document.createElement('div');
-        newWrapper.setAttribute('class', 'content');
-
-        var tmp = document.createDocumentFragment();
-        for (var i = 0; i < children.length; i++) {
-            var n = children[i];
-
-            tmp.appendChild(n);
-        }
-        var selector = content.getAttribute('select');
-        var result = query(selector, tmp);
-
-        (children || []).map(function(child, i, arr) {
-            var index = result.indexOf(child);
-            if (index >= 0) {
-                newWrapper.appendChild(arr.splice(i, 1)[0]);
-            }
-        });
-
-        if (newWrapper.children.length > 0) {
-            content.parentElement.replaceChild(newWrapper, content);
-        }
-    });
-    // 疑似bug
-    _shouldReplacedContent = [];
-}
 
 /*
  * @function
@@ -262,6 +226,41 @@ export function appendRoot(dom, parent, ifReplace) {
         root.appendChild(dom);
         root.setAttribute('class', classes.replace(/r-invisible/g, ''));
     }
+}
+
+/*
+ *@function handleContent, put children into right place in the content
+ * @param {array} contents contains children dom as an array
+ */
+export function handleContent(contents, _shouldReplacedContent) {
+    (contents || []).map(function(content, index){
+        var parent = getParent(content);
+        var num = parent.getAttribute('shouldReplacedContent');
+        var children = _shouldReplacedContent[parseInt(num)];
+
+        var newWrapper = document.createElement('div');
+        newWrapper.setAttribute('class', 'content');
+
+        var tmp = document.createDocumentFragment();
+        for (var i = 0; i < children.length; i++) {
+            var n = children[i];
+
+            tmp.appendChild(n);
+        }
+        var selector = content.getAttribute('select');
+        var result = query(selector, tmp);
+
+        (children || []).map(function(child, i, arr) {
+            var index = result.indexOf(child);
+            if (index >= 0) {
+                newWrapper.appendChild(arr.splice(i, 1)[0]);
+            }
+        });
+
+        if (newWrapper.children.length > 0) {
+            content.parentElement.replaceChild(newWrapper, content);
+        }
+    });
 }
 
 

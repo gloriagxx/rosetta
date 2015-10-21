@@ -12,7 +12,7 @@ import {ATTACHED, DETACHED, CREATED, ATTRIBUTECHANGE} from './lifeEvents.js';
 import htmlImport from './htmlImport';
 import supportEvent from './supportEvent.js';
 import {isArray, query, extend, toPlainArray, isOriginalTag, isDomNode, isString, isFunction, bind, fire, deserializeValue, typeHandlers} from './utils.js';
-import {updateRefs, triggerChildren, handleEvent, attributeToProperty, handleAttr, handleContent, updateChildElemRoot, appendRoot} from './elementUtils.js';
+import {updateRefs, triggerChildren, handleEvent, attributeToProperty, handleAttr, updateChildElemRoot, appendRoot, handleContent} from './elementUtils.js';
 
 
 // vdom relavent
@@ -234,7 +234,9 @@ function render(vTree, parentDOM, ifReplace) {
         rObj.root = dom;
         var contents = query('content', rObj.root);
         // 处理content
-        handleContent(contents);
+        handleContent(contents, _shouldReplacedContent);
+        // 疑似bug
+        _shouldReplacedContent = [];
         // 更新内部dom节点的ref
         updateRefs(rObj);
         // 更新自己的ref到rosetta
