@@ -84,14 +84,14 @@ function init() {
  * @param {object} initArr, attributes of the newly created element
  * @return {object} vTree, contains referer of rosetta instance
  */
-function create(type, initAttr) {
+function create(type, initAttr, len) {
     if (!isString(type)) {
         return;
     }
 
     initAttr = initAttr || {};
 
-    var children = [].slice.call(arguments, 2);
+    var children = len ? [].slice.call(arguments, 2, arguments.length - 1) : [].slice.call(arguments, 2);
     children = toPlainArray(children);
     var vTree  = '';
 
@@ -119,7 +119,7 @@ function create(type, initAttr) {
         }
 
         // 生成rosetta elem的id
-        var elemID = Math.random();
+        var elemID = len++;
 
         // 生成element实例
         var elemObj = new ElemClass();
@@ -203,14 +203,16 @@ function render(vTree, parentDOM, ifReplace) {
         updateRefs(rObj);
         // 更新自己的ref到rosetta
         setRef(rObj.__config.ref, rObj);
+
+        // 更新dom
+        appendRoot(dom, parentDOM, ifReplace);
         // 更新内部rosetta element instance的root（render前都是虚拟dom，嵌套的子element实际没有dom类型的root）
         updateChildElemRoot(rObj);
         // 处理事件绑定: 遍历每个子rosetta element绑定事件，绑定自己的事情
         handleEvent(rObj);
         // 派发element的ready事件（已经有dom，但是并未appedn到父节点上）
         triggerChildren(rObj, 'ready');
-        // 更新dom
-        appendRoot(dom, parentDOM, ifReplace);
+
         // 派发attached事件相关
         triggerChildren(rObj, ATTACHED);
         rObj.fire(ATTACHED, rObj);

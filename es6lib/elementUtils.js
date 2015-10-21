@@ -103,12 +103,12 @@ export function updateRefs(obj) {
  * @param {string} type - event name
  */
 export function triggerChildren(obj, type) {
-    for (var key in obj.rosettaChildren) {
-        var item = obj.rosettaChildren[key];
+    (obj.rosettaChildren || []).map((childItem) => {
+        var item = childItem.obj;
         triggerChildren(item, type);
         item[type].call(item);
         item.fire(type, item);
-    }
+    });
 }
 
 
@@ -205,19 +205,19 @@ export function handleAttr(attr, rosettaObj) {
  *
  */
 export function updateChildElemRoot(obj) {
-    console.log('updateChildElemRoot type :: ', obj.type);
     var rosettaChildren = obj.rosettaChildren;
     var root = obj.root;
 
-    for (var id in rosettaChildren) {
-        var item = rosettaChildren[id];
+    (rosettaChildren || []).map((childItem) => {
+        var item = childItem.obj;
+        var id = childItem.id;
 
         var dom = query('[elemID="' + id + '"]', root);
         item.root = dom[0];
-        console.log('updateChildElemRoot root :: ', dom[0]);
 
+        console.log(obj.type, id);
         updateChildElemRoot(item);
-    }
+    });
 }
 
 /*
@@ -279,25 +279,26 @@ export function handleContent(contents, _shouldReplacedContent) {
  */
 export function handleEvent(obj) {
     // 遍历每个子element
-    for (var id in obj.rosettaChildren) {
+    (obj.rosettaChildren || []).map((childItem) => {
         ((childID, childObj) => {
             // 每个子element需要代理的事件
             var events = childObj.shouldDelegateEvents;
-            console.log(events);
-            for (var type in events) {
-                (function(eventName, ifBinded, obj) {
-                    var root = obj.root;
 
+            for (var type in events) {
+                (function(eventName, ifBinded, itemObj) {
+                    var root = itemObj.root;
+
+                    console.log(itemObj.type, eventName, ifBinded);
                     if (ifBinded === 0) {
                         if (root.addEventListener) {
-                            root.addEventListener(eventName, function (e) {
+                            root.addEventListener(eventName, (e) => {
                                 e.stopPropagation();
-                                eventRealCB(e, obj);
+                                eventRealCB(e, itemObj);
                             }, false);
                         } else {
-                            root.attachEvent('on' + eventName, function(e) {
+                            root.attachEvent('on' + eventName, (e) => {
                                 e.stopPropagation();
-                                eventRealCB(e, obj);
+                                eventRealCB(e, itemObj);
                             });
                         }
 
@@ -307,8 +308,8 @@ export function handleEvent(obj) {
             }
 
             // 对每个子element的root进行事件绑定，并阻止冒泡
-        })(id, obj.rosettaChildren[id])
-    }
+        })(childItem.id, childItem.obj)
+    });
 }
 
 function eventRealCB (e, obj) {

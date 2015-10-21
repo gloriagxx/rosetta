@@ -123,12 +123,12 @@ function updateRefs(obj) {
  */
 
 function triggerChildren(obj, type) {
-    for (var key in obj.rosettaChildren) {
-        var item = obj.rosettaChildren[key];
+    (obj.rosettaChildren || []).map(function (childItem) {
+        var item = childItem.obj;
         triggerChildren(item, type);
         item[type].call(item);
         item.fire(type, item);
-    }
+    });
 }
 
 /*
@@ -234,19 +234,19 @@ function handleAttr(attr, rosettaObj) {
  */
 
 function updateChildElemRoot(obj) {
-    console.log('updateChildElemRoot type :: ', obj.type);
     var rosettaChildren = obj.rosettaChildren;
     var root = obj.root;
 
-    for (var id in rosettaChildren) {
-        var item = rosettaChildren[id];
+    (rosettaChildren || []).map(function (childItem) {
+        var item = childItem.obj;
+        var id = childItem.id;
 
         var dom = query('[elemID="' + id + '"]', root);
         item.root = dom[0];
-        console.log('updateChildElemRoot root :: ', dom[0]);
 
+        console.log(obj.type, id);
         updateChildElemRoot(item);
-    }
+    });
 }
 
 /*
@@ -310,25 +310,26 @@ function handleContent(contents, _shouldReplacedContent) {
 
 function handleEvent(obj) {
     // 遍历每个子element
-    for (var id in obj.rosettaChildren) {
+    (obj.rosettaChildren || []).map(function (childItem) {
         (function (childID, childObj) {
             // 每个子element需要代理的事件
             var events = childObj.shouldDelegateEvents;
-            console.log(events);
-            for (var type in events) {
-                (function (eventName, ifBinded, obj) {
-                    var root = obj.root;
 
+            for (var type in events) {
+                (function (eventName, ifBinded, itemObj) {
+                    var root = itemObj.root;
+
+                    console.log(itemObj.type, eventName, ifBinded);
                     if (ifBinded === 0) {
                         if (root.addEventListener) {
                             root.addEventListener(eventName, function (e) {
                                 e.stopPropagation();
-                                eventRealCB(e, obj);
+                                eventRealCB(e, itemObj);
                             }, false);
                         } else {
                             root.attachEvent('on' + eventName, function (e) {
                                 e.stopPropagation();
-                                eventRealCB(e, obj);
+                                eventRealCB(e, itemObj);
                             });
                         }
                     }
@@ -337,8 +338,8 @@ function handleEvent(obj) {
             }
 
             // 对每个子element的root进行事件绑定，并阻止冒泡
-        })(id, obj.rosettaChildren[id]);
-    }
+        })(childItem.id, childItem.obj);
+    });
 }
 
 function eventRealCB(e, obj) {
@@ -871,14 +872,14 @@ function init() {
  * @param {object} initArr, attributes of the newly created element
  * @return {object} vTree, contains referer of rosetta instance
  */
-function create(type, initAttr) {
+function create(type, initAttr, len) {
     if (!(0, _utilsJs.isString)(type)) {
         return;
     }
 
     initAttr = initAttr || {};
 
-    var children = [].slice.call(arguments, 2);
+    var children = len ? [].slice.call(arguments, 2, arguments.length - 1) : [].slice.call(arguments, 2);
     children = (0, _utilsJs.toPlainArray)(children);
     var vTree = '';
 
@@ -906,7 +907,7 @@ function create(type, initAttr) {
         }
 
         // 生成rosetta elem的id
-        var elemID = Math.random();
+        var elemID = len++;
 
         // 生成element实例
         var elemObj = new ElemClass();
@@ -990,14 +991,16 @@ function render(vTree, parentDOM, ifReplace) {
         (0, _elementUtilsJs.updateRefs)(rObj);
         // 更新自己的ref到rosetta
         setRef(rObj.__config.ref, rObj);
+
+        // 更新dom
+        (0, _elementUtilsJs.appendRoot)(dom, parentDOM, ifReplace);
         // 更新内部rosetta element instance的root（render前都是虚拟dom，嵌套的子element实际没有dom类型的root）
         (0, _elementUtilsJs.updateChildElemRoot)(rObj);
         // 处理事件绑定: 遍历每个子rosetta element绑定事件，绑定自己的事情
         (0, _elementUtilsJs.handleEvent)(rObj);
         // 派发element的ready事件（已经有dom，但是并未appedn到父节点上）
         (0, _elementUtilsJs.triggerChildren)(rObj, 'ready');
-        // 更新dom
-        (0, _elementUtilsJs.appendRoot)(dom, parentDOM, ifReplace);
+
         // 派发attached事件相关
         (0, _elementUtilsJs.triggerChildren)(rObj, _lifeEventsJs.ATTACHED);
         rObj.fire(_lifeEventsJs.ATTACHED, rObj);
@@ -1243,8 +1246,9 @@ function update(opts) {
     (0, _utilsJs.extend)(this, opts, true);
     // 更新__config
     (0, _utilsJs.extend)(this.__config, (0, _utilsJs.extend)({}, opts, true));
+    rObj.rosettaChildren = [];
 
-    // 生成新vtree和pathes
+    // 生成新vtree和patches
     var newTree = this.__t(this, this.$);
     var oldAttrs = oldTree.properties.attributes;
     var newAttrs = newTree.properties.attributes;
@@ -1262,6 +1266,7 @@ function update(opts) {
     this.vTree = newTree;
     this.vTree.rObj = rObj;
 
+    (0, _elementUtilsJs.updateChildElemRoot)(rObj);
     // 更新ref的引用
     (0, _elementUtilsJs.updateRefs)(rObj);
 
@@ -1302,7 +1307,8 @@ function destroy() {
 function create(elemType, attr) {
     // rosetta element模板中会调用这个接口
     // 调用rosetta的create方法，返回节点的vtree
-    var vTree = Rosetta.create.apply(Rosetta, arguments);
+    var childrenLen = this.rosettaChildren.length;
+    var vTree = Rosetta.create.apply(Rosetta, [].slice.call(arguments, 0).concat(childrenLen));
 
     // 将此vtree的引用放在this的中，保存attr.ref的引用
     if (!!attr && !!attr.ref) {
@@ -1314,7 +1320,10 @@ function create(elemType, attr) {
     if (!!vTree && !!vTree.rObj && vTree.rObj.isRosettaElem == true) {
         // 将子节点为rosettaElem的放到rosettaChildren里
         // 根element需要知道内嵌子element
-        this.rosettaChildren[vTree.rObj.elemID] = vTree.rObj;
+        var tmp = {};
+        tmp.obj = vTree.rObj;
+        tmp.id = vTree.rObj.elemID;
+        this.rosettaChildren.push(tmp);
 
         // 内嵌子element需要知道嵌套中的根element
         vTree.rObj.parentObj = this;
@@ -1357,7 +1366,7 @@ function elementClassFactory(prototypeOpts) {
 
             'isAttached': false,
 
-            'rosettaChildren': {},
+            'rosettaChildren': [],
 
             'shouldDelegateEvents': {}
 

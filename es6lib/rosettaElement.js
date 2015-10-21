@@ -1,6 +1,6 @@
 import {extend, isFunction, isPlainObject, isDomNode} from './utils.js';
 import {ATTACHED, DETACHED, CREATED, ATTRIBUTECHANGE} from './lifeEvents.js';
-import {bind, trigger, handleEvent, updateRefs, triggerChildren} from './elementUtils.js';
+import {bind, trigger, handleEvent, updateRefs, triggerChildren, updateChildElemRoot} from './elementUtils.js';
 import {supportEvent} from './supportEvent.js';
 
 
@@ -81,9 +81,9 @@ function update(opts) {
     extend(this, opts, true);
     // 更新__config
     extend(this.__config, extend({}, opts, true));
+    rObj.rosettaChildren = [];
 
-
-    // 生成新vtree和pathes
+    // 生成新vtree和patches
     var newTree = this.__t(this, this.$);
     var oldAttrs = oldTree.properties.attributes;
     var newAttrs = newTree.properties.attributes;
@@ -102,6 +102,7 @@ function update(opts) {
     this.vTree = newTree;
     this.vTree.rObj = rObj;
 
+    updateChildElemRoot(rObj);
     // 更新ref的引用
     updateRefs(rObj);
 
@@ -142,7 +143,8 @@ function destroy() {
 function create(elemType, attr) {
     // rosetta element模板中会调用这个接口
     // 调用rosetta的create方法，返回节点的vtree
-    var vTree = Rosetta.create.apply(Rosetta, arguments);
+    var childrenLen = this.rosettaChildren.length;
+    var vTree = Rosetta.create.apply(Rosetta, [].slice.call(arguments, 0).concat(childrenLen));
 
     // 将此vtree的引用放在this的中，保存attr.ref的引用
     if (!!attr && !!attr.ref) {
@@ -154,7 +156,10 @@ function create(elemType, attr) {
     if (!!vTree && !!vTree.rObj && vTree.rObj.isRosettaElem == true) {
         // 将子节点为rosettaElem的放到rosettaChildren里
         // 根element需要知道内嵌子element
-        this.rosettaChildren[vTree.rObj.elemID] = vTree.rObj;
+        var tmp = {};
+        tmp.obj = vTree.rObj;
+        tmp.id = vTree.rObj.elemID;
+        this.rosettaChildren.push(tmp);
 
         // 内嵌子element需要知道嵌套中的根element
         vTree.rObj.parentObj = this;
@@ -197,7 +202,7 @@ export default function elementClassFactory(prototypeOpts) {
 
                 'isAttached': false,
 
-                'rosettaChildren': {},
+                'rosettaChildren': [],
 
                 'shouldDelegateEvents': {}
 
