@@ -940,14 +940,17 @@ function create(type, initAttr) {
     if (!(0, _utilsJs.isString)(type)) {
         return;
     }
-
     initAttr = initAttr || {};
 
     var childLen = children.length;
-    var len = children[childLen - 1];
+    var len = undefined;
+    if (childLen > 0) {
+        len = children[childLen - 1];
+    }
     var children = typeof len === 'number' ? [].slice.call(children, 0, childLen - 1) : children;
-
+    len = len || 0;
     children = (0, _utilsJs.toPlainArray)(children);
+
     var vTree = '';
 
     if ((0, _utilsJs.isOriginalTag)(type)) {
