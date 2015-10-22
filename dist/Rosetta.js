@@ -285,7 +285,7 @@ function updateChildElemRoot(obj) {
         var item = childItem.obj;
         var id = childItem.id;
 
-        var dom = query('[elemID="' + id + '"]', root);
+        var dom = query('[elemID="' + id + '"][class="' + item.type + '"]', root);
         item.root = dom[0];
 
         updateChildElemRoot(item);
