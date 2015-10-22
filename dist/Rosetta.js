@@ -47,6 +47,7 @@ exports.appendRoot = appendRoot;
 exports.handleContent = handleContent;
 exports.handleEvent = handleEvent;
 exports.getPatches = getPatches;
+exports.updateRosettaChildren = updateRosettaChildren;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -363,7 +364,7 @@ function handleEvent(obj) {
                 var cb = function cb(e) {
                     eventRealCB(e, itemObj);
                 };
-
+                console.log(ifBinded);
                 if (ifBinded === 0) {
                     if (root.addEventListener) {
                         root.addEventListener(eventName, cb, false);
@@ -412,7 +413,14 @@ function eventRealCB(e, obj) {
     findCB(parent);
 }
 
+/*
+ * @function getPatches
+ * @param obj
+ * @param oldTree
+ */
+
 function getPatches(obj, oldTree) {
+    //存在一个bug，虽然隔离开了纯粹只是
     obj = (0, _utilsJs.extend)({}, obj, true);
     // 生成新vtree和patches
     var newTree = obj.__t(obj, obj.$);
@@ -427,8 +435,28 @@ function getPatches(obj, oldTree) {
 
     return {
         patches: (0, _virtualDomDiff2['default'])(oldTree, newTree),
-        newTree: newTree
+        newTree: newTree,
+        obj: obj
     };
+}
+
+/*
+ * @function updateRosettaChildren : 将newObj中已经在oldObj中的替换为oldObj的值
+ * @param oldObj
+ * @param newObj
+ *
+ */
+
+function updateRosettaChildren(oldRChildren, newRChildren) {
+    var oldLen = oldRChildren.length;
+
+    (newRChildren || []).map(function (itemChild, index) {
+        if (index >= oldLen) {
+            oldRChildren.push(itemChild);
+        }
+    });
+
+    return oldRChildren;
 }
 
 },{"./supportEvent.js":9,"./utils.js":10,"ev-store":12,"virtual-dom/create-element":15,"virtual-dom/diff":16,"virtual-dom/h":17}],3:[function(require,module,exports){
@@ -1315,11 +1343,16 @@ function update(opts) {
     (0, _utilsJs.extend)(this, opts, true);
     // 更新__config
     (0, _utilsJs.extend)(this.__config, (0, _utilsJs.extend)({}, opts, true));
+
+    var oldRChildren = rObj.rosettaChildren;
     rObj.rosettaChildren = [];
 
     var re = (0, _elementUtilsJs.getPatches)(rObj, oldTree);
     var patches = re.patches;
     var newTree = re.newTree;
+    var newObj = re.obj;
+
+    rObj.rosettaChildren = (0, _elementUtilsJs.updateRosettaChildren)(oldRChildren, newObj.rosettaChildren);
 
     // 更新树
     this.root = (0, _virtualDomPatch2['default'])(rootNode, patches);
