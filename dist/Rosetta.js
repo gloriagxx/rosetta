@@ -300,7 +300,7 @@ function updateChildElemRoot(obj) {
  */
 
 function appendRoot(dom, parent, ifReplace) {
-    var classes = parent.getAttribute('class');
+    var classes = parent.getAttribute('class') || '';
 
     if (ifReplace == true) {
         var v = dom.getAttribute('class');
@@ -356,7 +356,7 @@ function handleContent(rObj, _shouldReplacedContent) {
  *
  */
 
-function handleEvent(obj) {
+function handleEvent(obj, _shouldDelegateEvents) {
     function bindEvent(childObj) {
         // 每个子element需要代理的事件
         var events = childObj.shouldDelegateEvents;
@@ -392,7 +392,13 @@ function handleEvent(obj) {
         });
     }
 
-    handleChildren(obj);
+    if (obj.isRosettaElem !== true) {
+        window.shouldDelegateEvents = _shouldDelegateEvents;
+        window.root = obj;
+        handleChildren(window);
+    } else {
+        handleChildren(obj);
+    }
 }
 
 function eventRealCB(e, obj) {
@@ -401,7 +407,7 @@ function eventRealCB(e, obj) {
     var root = obj.root;
 
     function findCB(parent) {
-        if (parent == root || !parent) {
+        if (!parent) {
             return;
         }
 
@@ -944,6 +950,7 @@ var _allRendered = false; // 调用init的开始置为false，本次渲染所有
 var _refers = {}; // to store ref of Rosetta element instance in Rosetta
 var _elemClass = {};
 var _shouldReplacedContent = [];
+var _shouldDelegateEvents = {};
 
 /*
  * @function start parse document and render rosetta element
@@ -1024,6 +1031,7 @@ function create(type, initAttr) {
 
         vTree = _virtualDomH2['default'].call(this, type, newAttr, children);
         vTree.__events = events;
+        (0, _utilsJs.extend)(_shouldDelegateEvents, events, true);
 
         return vTree;
     } else {
@@ -1141,7 +1149,8 @@ function render(vTree, parentDOM, ifReplace) {
         return rObj;
     } else {
         // 处理事件代理
-
+        (0, _elementUtilsJs.handleEvent)(dom, _shouldDelegateEvents);
+        _shouldDelegateEvents = {};
         // dom append到parentdom上
         (0, _elementUtilsJs.appendRoot)(dom, parentDOM, ifReplace);
     }
