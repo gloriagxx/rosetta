@@ -48,6 +48,8 @@ exports.handleContent = handleContent;
 exports.handleEvent = handleEvent;
 exports.getPatches = getPatches;
 exports.updateRosettaChildren = updateRosettaChildren;
+exports.findRosettaTag = findRosettaTag;
+exports.classNameToClass = classNameToClass;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -285,7 +287,7 @@ function updateChildElemRoot(obj) {
         var item = childItem.obj;
         var id = childItem.id;
 
-        var dom = query('[elemID="' + id + '"][class="' + item.type + '"]', root);
+        var dom = query('[elemID="' + id + '"][class~="' + item.type + '"]', root);
         item.root = dom[0];
 
         updateChildElemRoot(item);
@@ -343,6 +345,8 @@ function handleContent(rObj, _shouldReplacedContent) {
 
         if (newWrapper.children.length > 0) {
             content.parentElement.replaceChild(newWrapper, content);
+        } else {
+            content.parentElement.removeChild(content);
         }
     });
 }
@@ -457,6 +461,36 @@ function updateRosettaChildren(oldRChildren, newRChildren) {
     });
 
     return oldRChildren;
+}
+
+function findRosettaTag() {
+    var elems = [];
+    if (!!document.getElementsByClassName) {
+        elems = document.getElementsByClassName('r-element');
+    } else if (!!document.querySelectorAll) {
+        elems = document.querySelectorAll('.r-element');
+    } else {
+        var doms = document.getElementsByTagName('*');
+        for (var i = 0; i < doms.length; i++) {
+            var item = doms[i];
+            if (item.tagName.toLowerCase().indexOf('r-') >= 0) {
+                elems.push(item);
+            }
+        }
+    }
+
+    return elems;
+}
+
+function classNameToClass(opts) {
+    if (opts && opts.className) {
+        var oldO = opts['class'].split(' ');
+        var newO = opts.className.split(' ');
+        opts['class'] = oldO.concat(newO).join(' ');
+        delete opts.className;
+    }
+
+    return opts;
 }
 
 },{"./supportEvent.js":9,"./utils.js":10,"ev-store":12,"virtual-dom/create-element":15,"virtual-dom/diff":16,"virtual-dom/h":17}],3:[function(require,module,exports){
@@ -911,25 +945,6 @@ var _refers = {}; // to store ref of Rosetta element instance in Rosetta
 var _elemClass = {};
 var _shouldReplacedContent = [];
 
-function findRosettaTag() {
-    var elems = [];
-    if (!!document.getElementsByClassName) {
-        elems = document.getElementsByClassName('r-element');
-    } else if (!!document.querySelectorAll) {
-        elems = document.querySelectorAll('.r-element');
-    } else {
-        var doms = document.getElementsByTagName('*');
-        for (var i = 0; i < doms.length; i++) {
-            var item = doms[i];
-            if (item.tagName.toLowerCase().indexOf('r-') >= 0) {
-                elems.push(item);
-            }
-        }
-    }
-
-    return elems;
-}
-
 /*
  * @function start parse document and render rosetta element
  */
@@ -937,7 +952,7 @@ function init() {
     // 找到页面的r-xxx元素
     // 如果是Rosetta已经注册的元素类型，则create、render
     _allRendered = false;
-    var elems = findRosettaTag();
+    var elems = (0, _elementUtilsJs.findRosettaTag)();
     var i = 0;
 
     for (; i < elems.length; i++) {
@@ -977,15 +992,16 @@ function create(type, initAttr) {
         return;
     }
     initAttr = initAttr || {};
+    initAttr = (0, _elementUtilsJs.classNameToClass)(initAttr);
 
     var childLen = children.length;
     var len = undefined;
     if (childLen > 0) {
         len = children[childLen - 1];
     }
-    var children = typeof len === 'number' ? [].slice.call(children, 0, childLen - 1) : children;
+    var children = typeof len === 'number' ? [].slice.call(children, 0, childLen - 1) : len = 0 && children;
     len = len || 0;
-    children = (0, _utilsJs.toPlainArray)(children);
+    children = (0, _utilsJs.toPlainArray)(children) || [];
 
     var vTree = '';
 
@@ -1029,23 +1045,26 @@ function create(type, initAttr) {
 
         // 生成vtree
         vTree = elemObj.__t(elemObj, elemObj.$);
-        vTree.properties.attributes.elemID = elemID;
 
         // 处理children，将children存起来，方便根节点render的时候统一处理children content的事情
-        if (children) {
-            // rosetta节点的children都需要走content过滤的逻辑
-            children.map(function (item, index) {
-                if (!item.nodeType) {
-                    children[index] = (0, _virtualDomCreateElement2['default'])(item);
-                }
-            });
+        // rosetta节点的children都需要走content过滤的逻辑
+        children.map(function (item, index) {
+            if (!item.nodeType) {
+                children[index] = (0, _virtualDomCreateElement2['default'])(item);
+            }
+        });
 
-            // 给当前的vtree序列号，便于根节点知道要把children插入到哪个content
-            // 疑似bug，需要重点单测
-            _shouldReplacedContent.push(children);
-            vTree.properties.attributes.shouldReplacedContent = _shouldReplacedContent.length - 1;
-            vTree.properties.attributes.isRosettaElem = true;
-        }
+        // 给当前的vtree序列号，便于根节点知道要把children插入到哪个content
+        // 疑似bug，需要重点单测
+        _shouldReplacedContent.push(children);
+
+        // 更新rosetta element节点的属性值，因为rosetta element在编译的时候__t里有自动生成的代码，于是只能外围更新了
+        (0, _utilsJs.extend)(vTree.properties.attributes, initAttr, {
+            shouldReplacedContent: _shouldReplacedContent.length - 1,
+            isRosettaElem: true,
+            'class': vTree.properties.attributes['class'] + ' ' + (initAttr['class'] || ''),
+            elemID: elemID
+        }, true);
 
         //vtree和robj相互引用，方便后面获取
         elemObj.vTree = vTree;
@@ -1401,7 +1420,7 @@ function create(elemType, attr) {
     // rosetta element模板中会调用这个接口
     // 调用rosetta的create方法，返回节点的vtree
     var childrenLen = this.rosettaChildren.length;
-    var vTree = Rosetta.create.apply(Rosetta, [].slice.call(arguments, 0).concat(childrenLen));
+    var vTree = Rosetta.create.apply(Rosetta, [elemType, attr].concat([].slice.call(arguments, 2)).concat(childrenLen));
 
     // 将此vtree的引用放在this的中，保存attr.ref的引用
     if (!!attr && !!attr.ref) {
