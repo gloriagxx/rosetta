@@ -364,7 +364,7 @@ function handleEvent(obj) {
                 var cb = function cb(e) {
                     eventRealCB(e, itemObj);
                 };
-                console.log(ifBinded);
+
                 if (ifBinded === 0) {
                     if (root.addEventListener) {
                         root.addEventListener(eventName, cb, false);
