@@ -48,6 +48,8 @@ exports.handleContent = handleContent;
 exports.handleEvent = handleEvent;
 exports.getPatches = getPatches;
 exports.updateRosettaChildren = updateRosettaChildren;
+exports.findRosettaTag = findRosettaTag;
+exports.classNameToClass = classNameToClass;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -343,6 +345,8 @@ function handleContent(rObj, _shouldReplacedContent) {
 
         if (newWrapper.children.length > 0) {
             content.parentElement.replaceChild(newWrapper, content);
+        } else {
+            content.parentElement.removeChild(content);
         }
     });
 }
@@ -459,6 +463,36 @@ function updateRosettaChildren(oldRChildren, newRChildren) {
     return oldRChildren;
 }
 
+function findRosettaTag() {
+    var elems = [];
+    if (!!document.getElementsByClassName) {
+        elems = document.getElementsByClassName('r-element');
+    } else if (!!document.querySelectorAll) {
+        elems = document.querySelectorAll('.r-element');
+    } else {
+        var doms = document.getElementsByTagName('*');
+        for (var i = 0; i < doms.length; i++) {
+            var item = doms[i];
+            if (item.tagName.toLowerCase().indexOf('r-') >= 0) {
+                elems.push(item);
+            }
+        }
+    }
+
+    return elems;
+}
+
+function classNameToClass(opts) {
+    if (opts && opts.className) {
+        var oldO = opts['class'].split(' ');
+        var newO = opts.className.split(' ');
+        opts['class'] = oldO.concat(newO).join(' ');
+        delete opts.className;
+    }
+
+    return opts;
+}
+
 },{"./supportEvent.js":9,"./utils.js":10,"ev-store":12,"virtual-dom/create-element":15,"virtual-dom/diff":16,"virtual-dom/h":17}],3:[function(require,module,exports){
 /**
  *
@@ -485,7 +519,7 @@ var head = document.getElementsByTagName('head')[0],
 /**
  *
  *
- *  example:
+ * @example:
  *
     Rosetta.resourceMap({
         res: {
@@ -911,25 +945,6 @@ var _refers = {}; // to store ref of Rosetta element instance in Rosetta
 var _elemClass = {};
 var _shouldReplacedContent = [];
 
-function findRosettaTag() {
-    var elems = [];
-    if (!!document.getElementsByClassName) {
-        elems = document.getElementsByClassName('r-element');
-    } else if (!!document.querySelectorAll) {
-        elems = document.querySelectorAll('.r-element');
-    } else {
-        var doms = document.getElementsByTagName('*');
-        for (var i = 0; i < doms.length; i++) {
-            var item = doms[i];
-            if (item.tagName.toLowerCase().indexOf('r-') >= 0) {
-                elems.push(item);
-            }
-        }
-    }
-
-    return elems;
-}
-
 /*
  * @function start parse document and render rosetta element
  */
@@ -937,7 +952,7 @@ function init() {
     // 找到页面的r-xxx元素
     // 如果是Rosetta已经注册的元素类型，则create、render
     _allRendered = false;
-    var elems = findRosettaTag();
+    var elems = (0, _elementUtilsJs.findRosettaTag)();
     var i = 0;
 
     for (; i < elems.length; i++) {
@@ -978,12 +993,14 @@ function create(type, initAttr) {
     }
     initAttr = initAttr || {};
 
+    initAttr = (0, _elementUtilsJs.classNameToClass)(initAttr);
+
     var childLen = children.length;
     var len = undefined;
     if (childLen > 0) {
         len = children[childLen - 1];
     }
-    var children = typeof len === 'number' ? [].slice.call(children, 0, childLen - 1) : children;
+    var children = typeof len === 'number' ? [].slice.call(children, 0, childLen - 1) : len = 0 && children;
     len = len || 0;
     children = (0, _utilsJs.toPlainArray)(children);
 
@@ -1044,8 +1061,9 @@ function create(type, initAttr) {
             // 疑似bug，需要重点单测
             _shouldReplacedContent.push(children);
             vTree.properties.attributes.shouldReplacedContent = _shouldReplacedContent.length - 1;
-            vTree.properties.attributes.isRosettaElem = true;
         }
+        vTree.properties.attributes.isRosettaElem = true;
+        vTree.properties.attributes['class'] = initAttr['class'];
 
         //vtree和robj相互引用，方便后面获取
         elemObj.vTree = vTree;
@@ -1338,6 +1356,8 @@ function update(opts) {
     if (!flag) {
         return;
     }
+
+    opts = (0, _elementUtilsJs.classNameToClass)(opts);
 
     // 更新property
     (0, _utilsJs.extend)(this, opts, true);
