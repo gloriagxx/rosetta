@@ -484,7 +484,7 @@ function findRosettaTag() {
 
 function classNameToClass(opts) {
     if (opts && opts.className) {
-        var oldO = opts['class'].split(' ');
+        var oldO = (opts['class'] || '').split(' ');
         var newO = opts.className.split(' ');
         opts['class'] = oldO.concat(newO).join(' ');
         delete opts.className;
