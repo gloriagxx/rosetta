@@ -991,19 +991,24 @@ function create(type, initAttr) {
     if (!(0, _utilsJs.isString)(type)) {
         return;
     }
+    var vTree = '';
+    var l = children.length;
+    var len = undefined;
+
     initAttr = initAttr || {};
     initAttr = (0, _elementUtilsJs.classNameToClass)(initAttr);
 
-    var childLen = children.length;
-    var len = undefined;
-    if (childLen > 0) {
-        len = children[childLen - 1];
+    if (l > 0) {
+        len = children[l - 1];
     }
-    var children = typeof len === 'number' ? [].slice.call(children, 0, childLen - 1) : len = 0 && children;
-    len = len || 0;
-    children = (0, _utilsJs.toPlainArray)(children) || [];
+    if (typeof len === 'number') {
+        children = [].slice.call(children, 0, l - 1);
+    } else {
+        len = 0;
+    }
 
-    var vTree = '';
+    len = len || 0;
+    children = (0, _utilsJs.toPlainArray)(children);
 
     if ((0, _utilsJs.isOriginalTag)(type)) {
         // 将initAttr转换为对应this.properties的type的attr真实值，并处理好vtree要求的事件属性格式
