@@ -365,7 +365,7 @@ function handleEvent(obj) {
                     eventRealCB(e, itemObj);
                 };
 
-                if (ifBinded === 0) {
+                if (root && ifBinded === 0) {
                     if (root.addEventListener) {
                         root.addEventListener(eventName, cb, false);
                     } else {
