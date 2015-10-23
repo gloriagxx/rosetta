@@ -402,7 +402,6 @@ function handleEvent(obj, _shouldDelegateEvents) {
 }
 
 function eventRealCB(e, obj) {
-    e.stopPropagation();
     var parent = e.target;
     var root = obj.root;
 
@@ -413,7 +412,10 @@ function eventRealCB(e, obj) {
 
         var realCallback = (0, _evStore2['default'])(parent)[e.type];
         if (!!realCallback) {
-            realCallback.call(obj, e);
+            var parentRElem = getParent(parent);
+            if (parentRElem == obj.root) {
+                realCallback.call(obj, e);
+            }
         } else {
             parent = parent.parentElement;
             findCB(parent);
