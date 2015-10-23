@@ -402,7 +402,6 @@ function handleEvent(obj, _shouldDelegateEvents) {
 }
 
 function eventRealCB(e, obj) {
-    e.stopPropagation();
     var parent = e.target;
     var root = obj.root;
 
