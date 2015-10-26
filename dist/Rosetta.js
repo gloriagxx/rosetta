@@ -440,7 +440,7 @@ function eventRealCB(e, obj) {
  * @param oldTree
  */
 
-function getPatches(obj) {
+function getPatches(obj, opts) {
     //存在一个bug，虽然隔离开了纯粹只是
     var oldTree = obj.vTree;
     obj = (0, _utilsJs.extend)({}, obj, true);
@@ -449,7 +449,7 @@ function getPatches(obj) {
     var oldAttrs = oldTree.properties.attributes;
     var newAttrs = newTree.properties.attributes;
 
-    (0, _utilsJs.extend)(newAttrs, {
+    (0, _utilsJs.extend)(newAttrs, opts, {
         isRosettaElem: oldAttrs.isRosettaElem,
         shouldReplacedContent: oldAttrs.shouldReplacedContent,
         elemID: oldAttrs.elemID
