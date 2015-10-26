@@ -440,8 +440,9 @@ function eventRealCB(e, obj) {
  * @param oldTree
  */
 
-function getPatches(obj, oldTree) {
+function getPatches(obj) {
     //存在一个bug，虽然隔离开了纯粹只是
+    var oldTree = obj.vTree;
     obj = (0, _utilsJs.extend)({}, obj, true);
     // 生成新vtree和patches
     var newTree = obj.__t(obj, obj.$);
@@ -455,7 +456,9 @@ function getPatches(obj, oldTree) {
     }, true);
 
     return {
-        patches: (0, _virtualDomDiff2['default'])(oldTree, newTree),
+        patches: (0, _virtualDomDiff2['default'])(oldTree, newTree, {
+            document: _utilsJs.document
+        }),
         newTree: newTree,
         obj: obj
     };
@@ -1144,9 +1147,12 @@ function create(type, initAttr) {
     len = len || 0;
     children = (0, _utilsJs.toPlainArray)(children);
 
-    return _nativeElementUtilsJs.createNative.apply(this, [].slice.call(arguments));
+    // var nVTree = createNative.apply(this, [].slice.call(arguments));
+    // if (nVTree) {
+    //     return nVTree;
+    // }
 
-    if ((0, _utilsJs.isOriginalTag)(type)) {
+    if ((0, _utilsJs.isOriginalTag)(type) || window.boost.support.indexOf(type) >= 0) {
         // 将initAttr转换为对应this.properties的type的attr真实值，并处理好vtree要求的事件属性格式
         // 生成vtree
         var result = (0, _elementUtilsJs.handleAttr)(initAttr);
@@ -1203,10 +1209,10 @@ function create(type, initAttr) {
         _shouldReplacedContent.push(children);
 
         // 更新rosetta element节点的属性值，因为rosetta element在编译的时候__t里有自动生成的代码，于是只能外围更新了
-        (0, _utilsJs.extend)(vTree.properties.attributes, initAttr, {
+        (0, _utilsJs.extend)(vTree.properties.attributes, {
             shouldReplacedContent: _shouldReplacedContent.length - 1,
             isRosettaElem: true,
-            'class': vTree.properties.attributes['class'] + ' ' + (initAttr['class'] || ''),
+            'class': (vTree.properties.attributes['class'] + ' ' + (initAttr['class'] || '')).trim(),
             elemID: elemID
         }, true);
 
@@ -1283,7 +1289,7 @@ function render(vTree, parentDOM, ifReplace) {
         return rObj;
     } else {
         // 注入native代码
-        var nObj = (0, _nativeElementUtilsJs.renderNative)(vTree, dom);
+        // var nObj = renderNative(vTree, dom);
 
         // 处理事件代理
         (0, _elementUtilsJs.handleEvent)(dom, _shouldDelegateEvents);
@@ -1521,7 +1527,7 @@ function update(opts) {
     var oldRChildren = rObj.rosettaChildren;
     rObj.rosettaChildren = [];
 
-    var re = (0, _elementUtilsJs.getPatches)(rObj, oldTree);
+    var re = (0, _elementUtilsJs.getPatches)(rObj, opts);
     var patches = re.patches;
     var newTree = re.newTree;
     var newObj = re.obj;
