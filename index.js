@@ -1,4 +1,6 @@
 import Rosetta from './lib/rosettaCore.js';
+import {document} from './lib/utils.js';
+
 
 require('./lib/shims.js');
 var readyRE = /complete/;
@@ -20,3 +22,6 @@ function ready(callback) {
 window.Rosetta = Rosetta;
 
 ready(Rosetta.render);
+
+
+export default Rosetta;
