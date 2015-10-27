@@ -1,4 +1,6 @@
 import Rosetta from './lib/rosettaCore.js';
+import {document} from './lib/utils.js';
+
 
 require('./lib/shims.js');
 var readyRE = /complete/;
