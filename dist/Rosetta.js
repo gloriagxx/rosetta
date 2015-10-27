@@ -440,10 +440,12 @@ function getPatches(obj, opts) {
     var oldAttrs = oldTree.properties.attributes;
     var newAttrs = newTree.properties.attributes;
 
-    (0, _utilsJs.extend)(newAttrs, opts, {
+    (0, _utilsJs.extend)(newAttrs, {
         isRosettaElem: oldAttrs.isRosettaElem,
         shouldReplacedContent: oldAttrs.shouldReplacedContent,
-        elemID: oldAttrs.elemID
+        elemID: oldAttrs.elemID,
+        'class': oldAttrs['class'],
+        id: oldAttrs['id']
     }, true);
 
     return {
@@ -1020,7 +1022,7 @@ function create(type, initAttr) {
     len = len || 0;
     children = (0, _utilsJs.toPlainArray)(children);
 
-    if ((0, _utilsJs.isOriginalTag)(type)) {
+    if (type.indexOf('-') < 0) {
         // 将initAttr转换为对应this.properties的type的attr真实值，并处理好vtree要求的事件属性格式
         // 生成vtree
         var result = (0, _elementUtilsJs.handleAttr)(initAttr);
@@ -1075,11 +1077,12 @@ function create(type, initAttr) {
         _shouldReplacedContent.push(children);
 
         // 更新rosetta element节点的属性值，因为rosetta element在编译的时候__t里有自动生成的代码，于是只能外围更新了
-        (0, _utilsJs.extend)(vTree.properties.attributes, initAttr, {
+        (0, _utilsJs.extend)(vTree.properties.attributes, {
             shouldReplacedContent: _shouldReplacedContent.length - 1,
             isRosettaElem: true,
             'class': vTree.properties.attributes['class'] + ' ' + (initAttr['class'] || ''),
-            elemID: elemID
+            elemID: elemID,
+            id: initAttr['id']
         }, true);
 
         //vtree和robj相互引用，方便后面获取
