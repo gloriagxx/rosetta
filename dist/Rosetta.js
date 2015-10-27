@@ -818,7 +818,7 @@ var _allRendered = false; // 调用init的开始置为false，本次渲染所有
 var _refers = {}; // to store ref of Rosetta element instance in Rosetta
 var _elemClass = {};
 var _shouldReplacedContent = [];
-window._shouldDelegateEvents = {};
+_shouldDelegateEvents = {};
 
 /*
  * @function start parse document and render rosetta element
