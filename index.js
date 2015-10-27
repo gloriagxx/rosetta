@@ -22,6 +22,3 @@ function ready(callback) {
 window.Rosetta = Rosetta;
 
 ready(Rosetta.render);
-
-
-export default Rosetta;
