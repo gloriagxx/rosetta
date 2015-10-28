@@ -326,7 +326,7 @@ function handleContent(rObj, _shouldReplacedContent) {
         var parent = getParent(content) || rObj.root;
         var num = parent.getAttribute('shouldReplacedContent');
         var children = _shouldReplacedContent[parseInt(num)];
-        var newWrapper = _utilsJs.document.createElement('div');
+        var newWrapper = _utilsJs.document.createElement(_utilsJs.defaultTag);
         newWrapper.setAttribute('class', 'content');
 
         var tmp = _utilsJs.document.createDocumentFragment();
@@ -434,10 +434,6 @@ function eventRealCB(e, obj) {
  */
 
 function getPatches(obj, opts) {
-<<<<<<< HEAD
-    var oldTree = obj.vTree;
-=======
->>>>>>> v1.1.1native
     //存在一个bug，虽然隔离开了纯粹只是
     var oldTree = obj.vTree;
     obj = (0, _utilsJs.extend)({}, obj, true);
@@ -949,11 +945,7 @@ function create(type, initAttr) {
         (0, _utilsJs.extend)(vTree.properties.attributes, {
             shouldReplacedContent: _shouldReplacedContent.length - 1,
             isRosettaElem: true,
-<<<<<<< HEAD
-            'class': vTree.properties.attributes['class'] + ' ' + (initAttr['class'] || ''),
-=======
             'class': (vTree.properties.attributes['class'] + ' ' + (initAttr['class'] || '')).trim(),
->>>>>>> v1.1.1native
             elemID: elemID,
             id: initAttr['id']
         }, true);
@@ -2495,6 +2487,8 @@ function deserializeValue(value, typeFunc, currentValue) {
 
 var document = window.boost || window.document;
 exports.document = document;
+var defaultTag = window.boost ? 'View' : 'div';
+exports.defaultTag = defaultTag;
 
 },{}],10:[function(require,module,exports){
 
