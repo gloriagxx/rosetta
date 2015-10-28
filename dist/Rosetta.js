@@ -345,7 +345,7 @@ function handleContent(rObj, _shouldReplacedContent) {
             }
         });
 
-        if (newWrapper.children.length > 0) {
+        if (newWrapper.childNodes.length > 0) {
             content.parentElement.replaceChild(newWrapper, content);
         } else {
             content.parentElement.removeChild(content);
@@ -818,7 +818,7 @@ var _allRendered = false; // 调用init的开始置为false，本次渲染所有
 var _refers = {}; // to store ref of Rosetta element instance in Rosetta
 var _elemClass = {};
 var _shouldReplacedContent = [];
-_shouldDelegateEvents = {};
+var _shouldDelegateEvents = {};
 
 /*
  * @function start parse document and render rosetta element
@@ -835,7 +835,7 @@ function init() {
         var type = item.tagName.toLowerCase();
         var options = {};
         var attrs = item.attributes || {};
-        var children = [].slice.call(item.children);
+        var children = [].slice.call(item.childNodes);
         var n = 0;
 
         for (; n < attrs.length; n++) {
@@ -939,7 +939,9 @@ function create(type, initAttr) {
 
         // 给当前的vtree序列号，便于根节点知道要把children插入到哪个content
         // 疑似bug，需要重点单测
-        _shouldReplacedContent.push(children);
+        if (!!children) {
+            _shouldReplacedContent.push(children);
+        }
 
         // 更新rosetta element节点的属性值，因为rosetta element在编译的时候__t里有自动生成的代码，于是只能外围更新了
         (0, _utilsJs.extend)(vTree.properties.attributes, {
