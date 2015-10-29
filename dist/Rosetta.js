@@ -412,7 +412,6 @@ function eventRealCB(e, obj) {
 
         var realCallback = (0, _evStore2['default'])(parent)[e.type];
         if (!!realCallback) {
-            console.log(parent['__EV_STORE_KEY@7']);
             var parentRElem = getParent(parent);
             if (parentRElem == obj.root) {
                 realCallback.call(obj, e);
