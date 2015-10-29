@@ -75,6 +75,7 @@ var _virtualDomCreateElement = require('virtual-dom/create-element');
 
 var _virtualDomCreateElement2 = _interopRequireDefault(_virtualDomCreateElement);
 
+window.diff = _virtualDomDiff2['default'];
 /**
  *
  * @module query
@@ -250,7 +251,7 @@ function attributeToProperty(name, value) {
  * @param {object} rosettaObj: rosetta element instance
  */
 
-function handleAttr(attr, rosettaObj, type) {
+function handleAttr(attr, rosettaObj) {
     // 处理attributes，转换为attr和事件分离的格式；如果需要toRealType，则转换类型（比较消耗性能）
     var eventObj = {};
     var events = {};
@@ -347,9 +348,7 @@ function handleContent(rObj, _shouldReplacedContent) {
 
         if (newWrapper.childNodes.length > 0) {
             content.parentElement.replaceChild(newWrapper, content);
-        } else {
-            content.parentElement.removeChild(content);
-        }
+        } // !important! :don't remove content node ,because it will cause vdom diff error
     });
 }
 
@@ -434,7 +433,6 @@ function eventRealCB(e, obj) {
 function getPatches(obj, opts) {
     //存在一个bug，虽然隔离开了纯粹只是
     var oldTree = obj.vTree;
-    obj = (0, _utilsJs.extend)({}, obj, true);
     // 生成新vtree和patches
     var newTree = obj.__t(obj, obj.$);
     var oldAttrs = oldTree.properties.attributes;
@@ -448,13 +446,12 @@ function getPatches(obj, opts) {
         id: oldAttrs['id']
     }, true);
 
-    return {
-        patches: (0, _virtualDomDiff2['default'])(oldTree, newTree, {
-            document: _utilsJs.document
-        }),
-        newTree: newTree,
-        obj: obj
-    };
+    newTree.rObj = obj;
+    obj.vTree = newTree;
+
+    return (0, _virtualDomDiff2['default'])(oldTree, newTree, {
+        document: _utilsJs.document
+    });
 }
 
 /*
@@ -887,7 +884,7 @@ function create(type, initAttr) {
     if (type.indexOf('-') < 0) {
         // 将initAttr转换为对应this.properties的type的attr真实值，并处理好vtree要求的事件属性格式
         // 生成vtree
-        var result = (0, _elementUtilsJs.handleAttr)(initAttr, null, children);
+        var result = (0, _elementUtilsJs.handleAttr)(initAttr);
         var attr = result.attr;
         var eventObj = result.eventObj;
         var events = result.events;
@@ -1181,6 +1178,10 @@ var _virtualDomPatch = require('virtual-dom/patch');
 
 var _virtualDomPatch2 = _interopRequireDefault(_virtualDomPatch);
 
+var _virtualDomCreateElement = require('virtual-dom/create-element');
+
+var _virtualDomCreateElement2 = _interopRequireDefault(_virtualDomCreateElement);
+
 /**
  * @function for event binding
  * @param {string} eventName - the name of the event
@@ -1255,20 +1256,12 @@ function update(opts) {
     var oldRChildren = rObj.rosettaChildren;
     rObj.rosettaChildren = [];
 
-    var re = (0, _elementUtilsJs.getPatches)(rObj, opts);
-    var patches = re.patches;
-    var newTree = re.newTree;
-    var newObj = re.obj;
-
-    rObj.rosettaChildren = (0, _elementUtilsJs.updateRosettaChildren)(oldRChildren, newObj.rosettaChildren);
-    rObj.shouldDelegateEvents = (0, _utilsJs.extend)({}, newObj.shouldDelegateEvents, rObj.shouldDelegateEvents);
+    var patches = (0, _elementUtilsJs.getPatches)(rObj, opts);
 
     // 更新树
     this.root = (0, _virtualDomPatch2['default'])(rootNode, patches, {
         document: _utilsJs.document
     });
-    this.vTree = newTree;
-    this.vTree.rObj = rObj;
 
     (0, _elementUtilsJs.updateChildElemRoot)(rObj);
     // 更新ref的引用
@@ -1441,7 +1434,7 @@ function elementClassFactory(prototypeOpts) {
 
 module.exports = exports['default'];
 
-},{"./elementUtils.js":2,"./lifeEvents.js":4,"./supportEvent.js":8,"./utils.js":9,"virtual-dom/patch":24}],7:[function(require,module,exports){
+},{"./elementUtils.js":2,"./lifeEvents.js":4,"./supportEvent.js":8,"./utils.js":9,"virtual-dom/create-element":14,"virtual-dom/patch":24}],7:[function(require,module,exports){
 'use strict';
 
 var _utilsJs = require('./utils.js');
