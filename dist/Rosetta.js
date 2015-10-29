@@ -194,7 +194,7 @@ function getParent(_x) {
 
         var parent = dom.parentElement;
         if (!parent) {
-            return;
+            return _utilsJs.document;
         }
 
         if (parent.getAttribute('isRosettaElem') === 'true') {
@@ -1024,7 +1024,7 @@ function render(vTree, parentDOM, ifReplace) {
         return rObj;
     } else {
         // 处理事件代理
-        (0, _elementUtilsJs.handleEvent)(dom, _shouldDelegateEvents);
+        (0, _elementUtilsJs.handleEvent)(_utilsJs.document, _shouldDelegateEvents);
         _shouldDelegateEvents = {};
         // dom append到parentdom上
         (0, _elementUtilsJs.appendRoot)(dom, parentDOM, ifReplace);
