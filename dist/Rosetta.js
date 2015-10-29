@@ -250,7 +250,7 @@ function attributeToProperty(name, value) {
  * @param {object} rosettaObj: rosetta element instance
  */
 
-function handleAttr(attr, rosettaObj) {
+function handleAttr(attr, rosettaObj, type) {
     // 处理attributes，转换为attr和事件分离的格式；如果需要toRealType，则转换类型（比较消耗性能）
     var eventObj = {};
     var events = {};
@@ -362,25 +362,23 @@ function handleEvent(obj, _shouldDelegateEvents) {
     function bindEvent(childObj) {
         // 每个子element需要代理的事件
         var events = childObj.shouldDelegateEvents;
+        var root = childObj.root;
+        var cb = function cb(e) {
+            eventRealCB(e, childObj);
+        };
+        root.bindedEvent = root.bindedEvent || {};
 
         for (var type in events) {
-            (function (eventName, ifBinded, itemObj) {
-                var root = itemObj.root;
-
-                var cb = function cb(e) {
-                    eventRealCB(e, itemObj);
-                };
-
-                if (root && ifBinded === 0) {
+            (function (eventName) {
+                if (root && !root.bindedEvent[eventName]) {
                     if (root.addEventListener) {
                         root.addEventListener(eventName, cb, false);
                     } else {
                         root.attachEvent('on' + eventName, cb);
                     }
+                    root.bindedEvent[eventName] = cb;
                 }
-            })(type, events[type], childObj);
-
-            events[type] = 1;
+            })(type, events[type]);
         }
     }
 
@@ -414,6 +412,7 @@ function eventRealCB(e, obj) {
 
         var realCallback = (0, _evStore2['default'])(parent)[e.type];
         if (!!realCallback) {
+            console.log(parent['__EV_STORE_KEY@7']);
             var parentRElem = getParent(parent);
             if (parentRElem == obj.root) {
                 realCallback.call(obj, e);
@@ -467,15 +466,16 @@ function getPatches(obj, opts) {
  */
 
 function updateRosettaChildren(oldRChildren, newRChildren) {
-    var oldLen = oldRChildren.length;
+    // var oldLen = oldRChildren.length;
 
-    (newRChildren || []).map(function (itemChild, index) {
-        if (index >= oldLen) {
-            oldRChildren.push(itemChild);
-        }
-    });
+    // (newRChildren || []).map((itemChild, index) => {
+    //     if (index >= oldLen) {
+    //         oldRChildren.push(itemChild);
+    //     }
+    // });
 
-    return oldRChildren;
+    // return oldRChildren;
+    return newRChildren;
 }
 
 function findRosettaTag() {
@@ -888,7 +888,7 @@ function create(type, initAttr) {
     if (type.indexOf('-') < 0) {
         // 将initAttr转换为对应this.properties的type的attr真实值，并处理好vtree要求的事件属性格式
         // 生成vtree
-        var result = (0, _elementUtilsJs.handleAttr)(initAttr);
+        var result = (0, _elementUtilsJs.handleAttr)(initAttr, null, children);
         var attr = result.attr;
         var eventObj = result.eventObj;
         var events = result.events;
@@ -1262,6 +1262,7 @@ function update(opts) {
     var newObj = re.obj;
 
     rObj.rosettaChildren = (0, _elementUtilsJs.updateRosettaChildren)(oldRChildren, newObj.rosettaChildren);
+    rObj.shouldDelegateEvents = (0, _utilsJs.extend)({}, newObj.shouldDelegateEvents, rObj.shouldDelegateEvents);
 
     // 更新树
     this.root = (0, _virtualDomPatch2['default'])(rootNode, patches, {
