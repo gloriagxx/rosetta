@@ -435,8 +435,8 @@ function eventRealCB(e) {
  * @param oldTree
  */
 
-function getPatches(obj, opts) {
-    //存在一个bug，虽然隔离开了纯粹只是
+function getPatches(rObj, opts) {
+    var obj = (0, _utilsJs.extend)({}, rObj);
     var oldTree = obj.vTree;
     // 生成新vtree和patches
     var newTree = obj.__t(obj, obj.$);
@@ -451,12 +451,12 @@ function getPatches(obj, opts) {
         id: oldAttrs['id']
     }, true);
 
-    newTree.rObj = obj;
-    obj.vTree = newTree;
-
-    return (0, _virtualDomDiff2['default'])(oldTree, newTree, {
-        document: _utilsJs.document
-    });
+    return {
+        newTree: newTree,
+        patches: (0, _virtualDomDiff2['default'])(oldTree, newTree, {
+            document: _utilsJs.document
+        })
+    };
 }
 
 /*
@@ -1262,7 +1262,12 @@ function update(opts) {
     var oldRChildren = rObj.rosettaChildren;
     rObj.rosettaChildren = [];
 
-    var patches = (0, _elementUtilsJs.getPatches)(rObj, opts);
+    var result = (0, _elementUtilsJs.getPatches)(rObj, opts);
+    var patches = result.patches;
+    var newTree = result.newTree;
+
+    rObj.vTree = newTree;
+    newTree.rObj = rObj;
 
     // 更新树
     this.root = (0, _virtualDomPatch2['default'])(rootNode, patches, {
