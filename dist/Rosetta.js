@@ -162,6 +162,11 @@ function updateRefs(obj) {
         var node = query('[ref="' + key + '"]', dom);
         obj.$[key] = node;
     }
+
+    (obj.rosettaChildren || []).map(function (childItem) {
+        var item = childItem;
+        updateRefs(item);
+    });
 }
 
 /**
@@ -173,7 +178,7 @@ function updateRefs(obj) {
 
 function triggerChildren(obj, type) {
     (obj.rosettaChildren || []).map(function (childItem) {
-        var item = childItem.obj;
+        var item = childItem;
         triggerChildren(item, type);
         item[type].call(item);
         item.fire(type, item);
@@ -286,11 +291,11 @@ function updateChildElemRoot(obj) {
     var rosettaChildren = obj.rosettaChildren;
     var root = obj.root;
 
-    (rosettaChildren || []).map(function (childItem) {
-        var item = childItem.obj;
-        var id = childItem.id;
+    (rosettaChildren || []).map(function (item) {
+        var id = item.elemID;
 
         var dom = query('[elemID="' + id + '"][class~="' + item.type + '"]', root);
+        dom[0].rObj = item;
         item.root = dom[0];
 
         updateChildElemRoot(item);
@@ -362,20 +367,20 @@ function handleEvent(obj, _shouldDelegateEvents) {
         // 每个子element需要代理的事件
         var events = childObj.shouldDelegateEvents;
         var root = childObj.root;
-        var cb = function cb(e) {
-            eventRealCB(e, childObj);
-        };
+
         root.bindedEvent = root.bindedEvent || {};
 
         for (var type in events) {
             (function (eventName) {
+                root.rObj = childObj;
+                debugger;
                 if (root && !root.bindedEvent[eventName]) {
                     if (root.addEventListener) {
-                        root.addEventListener(eventName, cb, false);
+                        root.addEventListener(eventName, eventRealCB, false);
                     } else {
-                        root.attachEvent('on' + eventName, cb);
+                        root.attachEvent('on' + eventName, eventRealCB);
                     }
-                    root.bindedEvent[eventName] = cb;
+                    root.bindedEvent[eventName] = eventRealCB;
                 }
             })(type, events[type]);
         }
@@ -387,7 +392,7 @@ function handleEvent(obj, _shouldDelegateEvents) {
         (obj.rosettaChildren || []).map(function (childItem) {
             (function (childObj) {
                 handleChildren(childObj);
-            })(childItem.obj);
+            })(childItem);
         });
     }
 
@@ -400,9 +405,10 @@ function handleEvent(obj, _shouldDelegateEvents) {
     }
 }
 
-function eventRealCB(e, obj) {
+function eventRealCB(e) {
+    var root = e.currentTarget;
     var parent = e.target;
-    var root = obj.root;
+    var obj = root.rObj;
 
     function findCB(parent) {
         if (!parent) {
@@ -412,7 +418,7 @@ function eventRealCB(e, obj) {
         var realCallback = (0, _evStore2['default'])(parent)[e.type];
         if (!!realCallback) {
             var parentRElem = getParent(parent);
-            if (parentRElem == obj.root) {
+            if (parentRElem == root) {
                 realCallback.call(obj, e);
             }
         } else {
@@ -992,6 +998,7 @@ function render(vTree, parentDOM, ifReplace) {
     }
 
     if (!!rObj && rObj.isRosettaElem == true) {
+        dom.rObj = rObj;
         rObj.root = dom;
         // 处理content
         (0, _elementUtilsJs.handleContent)(rObj, _shouldReplacedContent);
@@ -1266,6 +1273,7 @@ function update(opts) {
     (0, _elementUtilsJs.updateChildElemRoot)(rObj);
     // 更新ref的引用
     (0, _elementUtilsJs.updateRefs)(rObj);
+    this.root.rObj = rObj;
 
     // 更新事件代理(不用移除旧的事件绑定)
     (0, _elementUtilsJs.handleEvent)(rObj);
@@ -1317,10 +1325,7 @@ function create(elemType, attr) {
     if (!!vTree && !!vTree.rObj && vTree.rObj.isRosettaElem == true) {
         // 将子节点为rosettaElem的放到rosettaChildren里
         // 根element需要知道内嵌子element
-        var tmp = {};
-        tmp.obj = vTree.rObj;
-        tmp.id = vTree.rObj.elemID;
-        this.rosettaChildren.push(tmp);
+        this.rosettaChildren.push(vTree.rObj);
 
         // 内嵌子element需要知道嵌套中的根element
         vTree.rObj.parentObj = this;
