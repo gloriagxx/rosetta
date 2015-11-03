@@ -295,6 +295,7 @@ function updateChildElemRoot(obj) {
         var id = item.elemID;
 
         var dom = query('[elemID="' + id + '"][class~="' + item.type + '"]', root);
+        dom[0].rObj = item;
         item.root = dom[0];
 
         updateChildElemRoot(item);
@@ -417,7 +418,6 @@ function eventRealCB(e) {
         if (!!realCallback) {
             var parentRElem = getParent(parent);
             if (parentRElem == root) {
-                debugger;
                 realCallback.call(obj, e);
             }
         } else {
