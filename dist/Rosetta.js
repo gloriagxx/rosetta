@@ -370,19 +370,15 @@ function handleEvent(obj, _shouldDelegateEvents) {
 
         root.bindedEvent = root.bindedEvent || {};
 
-        for (var type in events) {
-            (function (eventName) {
-                root.rObj = childObj;
-                debugger;
-                if (root && !root.bindedEvent[eventName]) {
-                    if (root.addEventListener) {
-                        root.addEventListener(eventName, eventRealCB, false);
-                    } else {
-                        root.attachEvent('on' + eventName, eventRealCB);
-                    }
-                    root.bindedEvent[eventName] = eventRealCB;
+        for (var eventName in events) {
+            if (root && !root.bindedEvent[eventName]) {
+                if (root.addEventListener) {
+                    root.addEventListener(eventName, eventRealCB, false);
+                } else {
+                    root.attachEvent('on' + eventName, eventRealCB);
                 }
-            })(type, events[type]);
+                root.bindedEvent[eventName] = eventRealCB;
+            }
         }
     }
 
