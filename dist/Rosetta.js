@@ -369,15 +369,18 @@ function handleEvent(obj, _shouldDelegateEvents) {
 
         root.bindedEvent = root.bindedEvent || {};
 
-        for (var eventName in events) {
-            if (root && !root.bindedEvent[eventName]) {
-                if (root.addEventListener) {
-                    root.addEventListener(eventName, eventRealCB, false);
-                } else {
-                    root.attachEvent('on' + eventName, eventRealCB);
+        for (var type in events) {
+
+            (function (eventName) {
+                if (root && !root.bindedEvent[eventName]) {
+                    if (root.addEventListener) {
+                        root.addEventListener(eventName, eventRealCB, false);
+                    } else {
+                        root.attachEvent('on' + eventName, eventRealCB);
+                    }
+                    root.bindedEvent[eventName] = eventRealCB;
                 }
-                root.bindedEvent[eventName] = eventRealCB;
-            }
+            })(type);
         }
     }
 
@@ -414,6 +417,7 @@ function eventRealCB(e) {
         if (!!realCallback) {
             var parentRElem = getParent(parent);
             if (parentRElem == root) {
+                debugger;
                 realCallback.call(obj, e);
             }
         } else {
