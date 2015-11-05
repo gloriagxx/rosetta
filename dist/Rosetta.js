@@ -2800,13 +2800,18 @@ function patchObject(node, props, previous, propName, propValue) {
                 node.removeAttribute(attrName)
             } else {
                 node.setAttribute(attrName, attrValue)
+                if (attrName == 'value') {
+                    node.value = attrValue
+                } else {
+                    node.setAttribute(attrName, attrValue)
+                }
             }
         }
 
         return
     }
 
-    if(previousValue && isObject(previousValue) &&
+    if (previousValue && isObject(previousValue) &&
         getPrototype(previousValue) !== getPrototype(propValue)) {
         node[propName] = propValue
         return
