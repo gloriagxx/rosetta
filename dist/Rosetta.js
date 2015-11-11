@@ -2797,6 +2797,9 @@ function patchObject(node, props, previous, propName, propValue) {
             var attrValue = propValue[attrName]
 
             if (attrValue === undefined) {
+                if (attrName == 'checked') {
+                    node.checked = false;
+                }
                 node.removeAttribute(attrName)
             } else {
                 node.setAttribute(attrName, attrValue)
