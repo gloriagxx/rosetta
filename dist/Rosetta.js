@@ -1109,7 +1109,7 @@ function setRef(key, value) {
         ready: function() {}
         created: function() {}
         attached: function() {}
-        dettached: function() {}
+        detached: function() {}
         attributeChanged: function() {}
         extends: 'type name'
         properties: {
@@ -1300,9 +1300,9 @@ function destroy() {
     this.root.parentElement.removeChild(this.root);
     delete Rosetta.ref(this.name);
 
-    // 触发dettached相关事件
+    // 触发detached相关事件
     (0, _elementUtilsJs.triggerChildren)(this, _lifeEventsJs.DETACHED);
-    this.dettached.call(this);
+    this.detached.call(this);
     this.fire(_lifeEventsJs.DETACHED, this);
     this.isAttached = false;
 }
@@ -1411,7 +1411,7 @@ function elementClassFactory(prototypeOpts) {
 
         attached: function attached() {},
 
-        dettached: function dettached() {},
+        detached: function detached() {},
 
         attributeChanged: function attributeChanged() {},
 
