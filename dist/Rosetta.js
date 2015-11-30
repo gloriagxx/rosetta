@@ -375,7 +375,7 @@ function handleEvent(obj, _shouldDelegateEvents) {
             (function (eventName) {
                 if (root && !root.bindedEvent[eventName]) {
                     if (root.addEventListener) {
-                        root.addEventListener(eventName, eventRealCB, false);
+                        root.addEventListener(eventName, eventRealCB, true);
                     } else {
                         root.attachEvent('on' + eventName, eventRealCB);
                     }
