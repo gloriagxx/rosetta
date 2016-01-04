@@ -911,7 +911,8 @@ function create(type, initAttr) {
         }
 
         // 生成rosetta elem的id
-        var elemID = len++;
+        // var elemID = len++;
+        var elemID = Math.random();
 
         // 生成element实例
         var elemObj = new ElemClass();
