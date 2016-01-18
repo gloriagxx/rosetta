@@ -448,7 +448,8 @@ function getPatches(rObj, opts) {
         shouldReplacedContent: oldAttrs.shouldReplacedContent,
         elemID: oldAttrs.elemID,
         'class': oldAttrs['class'],
-        id: oldAttrs['id']
+        id: oldAttrs['id'],
+        style: oldAttrs['style']
     }, true);
 
     return {
@@ -951,7 +952,8 @@ function create(type, initAttr) {
             isRosettaElem: true,
             'class': (vTree.properties.attributes['class'] + ' ' + (initAttr['class'] || '')).trim(),
             elemID: elemID,
-            id: initAttr['id']
+            id: initAttr['id'],
+            style: initAttr['style']
         }, true);
 
         //vtree和robj相互引用，方便后面获取
