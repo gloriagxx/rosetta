@@ -1258,9 +1258,14 @@ function update(opts) {
     }
 
     // 更新property
-    (0, _utilsJs.extend)(this, opts, true);
+    // extend(this, opts, true);
     // 更新__config
-    (0, _utilsJs.extend)(this.__config, (0, _utilsJs.extend)({}, opts, true));
+    // extend(this.__config, extend({}, opts, true));
+    var tmp = (0, _utilsJs.extend)({}, opts, true);
+    for (var key in tmp) {
+        this[key] = tmp[key];
+        this.__config[key] = tmp[key];
+    }
 
     var oldRChildren = rObj.rosettaChildren;
     rObj.rosettaChildren = [];
