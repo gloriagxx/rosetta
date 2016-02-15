@@ -295,10 +295,15 @@ function updateChildElemRoot(obj) {
         var id = item.elemID;
 
         var dom = query('[elemID="' + id + '"][class~="' + item.type + '"]', root);
-        dom[0].rObj = item;
-        item.root = dom[0];
 
-        updateChildElemRoot(item);
+        (dom || []).map(function (re, index) {
+            if (!$(re).parent('[isrosettaelem=true]')[0] || $(re).parent('[isrosettaelem=true]')[0] == root) {
+                re.rObj = item;
+                item.root = re;
+
+                updateChildElemRoot(item);
+            }
+        });
     });
 }
 
@@ -367,6 +372,9 @@ function handleEvent(obj, _shouldDelegateEvents) {
         // 每个子element需要代理的事件
         var events = childObj.shouldDelegateEvents;
         var root = childObj.root;
+        if (!root) {
+            return;
+        }
 
         root.bindedEvent = root.bindedEvent || {};
 
@@ -437,11 +445,19 @@ function eventRealCB(e) {
 
 function getPatches(rObj, opts) {
     var obj = (0, _utilsJs.extend)({}, rObj);
-    var oldTree = obj.vTree;
+    var oldTree = rObj.vTree;
+
     // 生成新vtree和patches
     var newTree = obj.__t(obj, obj.$);
     var oldAttrs = oldTree.properties.attributes;
     var newAttrs = newTree.properties.attributes;
+
+    // console.log('oldTree');
+    // console.log(createElement(oldTree));
+    // console.log('oldTree end');
+    // console.log('newTree');
+    // console.log(createElement(newTree));
+    // console.log('newTree end');
 
     (0, _utilsJs.extend)(newAttrs, {
         isRosettaElem: oldAttrs.isRosettaElem,
@@ -912,8 +928,8 @@ function create(type, initAttr) {
         }
 
         // 生成rosetta elem的id
-        // var elemID = len++;
-        var elemID = Math.random();
+        var elemID = len++;
+        // var elemID = Math.random();
 
         // 生成element实例
         var elemObj = new ElemClass();
@@ -1239,11 +1255,20 @@ function fire(eventName) {
  */
 function update(opts) {
     var rObj = this;
-    var oldTree = this.vTree;
     var rootNode = this.root;
     var type = this.type;
     var attr = {};
     var flag = false;
+
+    // var obj = extend({}, rObj);
+    // for (var key in obj.__config) {
+    //     obj[key] = obj.__config[key];
+    // }
+
+    // var oldTree = obj.__t(obj, obj.$);
+    // if (this.type == 'r-table') {
+    //     console.log(createElement(oldTree));
+    // }
 
     // 判断是不是更新的数据和已有的数据存在不同
     for (var key in opts) {
@@ -1264,7 +1289,7 @@ function update(opts) {
     var tmp = (0, _utilsJs.extend)({}, opts, true);
     for (var key in tmp) {
         this[key] = tmp[key];
-        this.__config[key] = tmp[key];
+        this.__config[key] = (0, _utilsJs.extend)({}, tmp[key], true);
     }
 
     var oldRChildren = rObj.rosettaChildren;
